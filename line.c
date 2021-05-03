@@ -83,6 +83,8 @@ void line_center(struct Line *line, int char_w) {
 
     bool im = insert_mode;
 
+    insert_mode = false;
+
     while (line->string[i] == ' ') {
         line_cut_char(line, i);
     }

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <unistd.h>
 
 #include "util.h"
 
@@ -28,6 +29,8 @@ struct Buffer *buffer_new(const char *name, bool minibuf) {
     b->lines = tcalloc(b->capacity, sizeof(struct Line));
     b->is_minibuf = minibuf;
     b->name = tcalloc(128, 1);
+    
+    b->eol_sequence = EOL_UNKNOWN;
 
     b->x = 0;
     b->y = 0;
@@ -148,42 +151,8 @@ void buffer_free(struct Buffer *buf) {
     free(buf);
 }
 
-/* Free current buffer, create a new one, then load in contents of a file into the buffer. */
-void buffer_load_file(struct Buffer *buf, char *file) {
-    FILE *f;
-    char *str;
-    size_t length;
-    long p;
-
-    int ppx = point_x, ppy = point_y;
-    
-    f = fopen(file, "r");
-    if (!f) {
-        minibuffer_log("Creating new file.");
-
-        cbuf = buf;
-        
-        line_cut_str(buf->lines + 0, 0, buf->lines[0].length);
-        buf->lines[0].length = 0;
-        for (int i = 1; i < buf->length; ++i) {
-            line_cut_str(buf->lines + i, 0, buf->lines[i].length);
-            buf->lines[i].length = 0;
-            free(buf->lines[i].string);
-        }
-        buf->length = 1;
-    
-        strcpy(buf->name, file);
-        SDL_SetWindowTitle(window, buf->name);
-
-        point_x = 0;
-        point_y = 0;
-        
-        cbuf->yoff = cbuf->desired_yoff = 0;
-        return;
-    }
-
-    cbuf = buf;
-    
+/* Clears the lines of a buffer */
+void buffer_reset(struct Buffer *buf) {
     line_cut_str(buf->lines + 0, 0, buf->lines[0].length);
     buf->lines[0].length = 0;
     for (int i = 1; i < buf->length; ++i) {
@@ -192,6 +161,40 @@ void buffer_load_file(struct Buffer *buf, char *file) {
         free(buf->lines[i].string);
     }
     buf->length = 1;
+}
+
+/* Free current buffer, create a new one, then load in contents of a file into the buffer. */
+void buffer_load_file(struct Buffer *buf, char *file) {
+    FILE *f;
+    char *str;
+
+    int ppx = point_x, ppy = point_y;
+
+    f = fopen(file, "r");
+    if (!f) {
+        minibuffer_log("Creating new file.");
+
+        buffer_reset(buf);
+        
+        cbuf = buf;
+        
+        strcpy(buf->name, file);
+        SDL_SetWindowTitle(window, buf->name);
+
+        point_x = 0;
+        point_y = 0;
+        
+        cbuf->yoff = cbuf->desired_yoff = 0;
+        return;
+    } else {
+        fclose(f);
+        buf->eol_sequence = buffer_find_eol_sequence(buf);
+        f = fopen(file, "r");
+    }
+
+    cbuf = buf;
+    
+    buffer_reset(buf);
     
     strcpy(cbuf->name, file);
     SDL_SetWindowTitle(window, cbuf->name);
@@ -201,14 +204,7 @@ void buffer_load_file(struct Buffer *buf, char *file) {
 
     insert_mode = false;
 
-    p = ftell(f);
-    fseek(f, 0, SEEK_END);
-    length = ftell(f);
-    fseek(f, p, SEEK_SET);
-
-    str = talloc(length + 1);
-    fread(str, 1, length, f);
-    str[length] = 0;
+    str = read_file(f, NULL);
 
     fclose(f);
 
@@ -235,21 +231,82 @@ void buffer_save_new(struct Buffer *buf, const char *name) {
     buffer_save(buf);
 }
 
+int buffer_find_eol_sequence(struct Buffer *buf) {
+    FILE *f;
+    char *str;
+    
+    int ending = EOL_LF;
+    
+    f = fopen(buf->name, "rb");
+    /* Figure out EOL character sequence. */
+    if (f) {
+        size_t length;
+        
+        str = read_file(f, &length);
+        
+        for (size_t i = 0; i < length; ++i) {
+            if (str[i] == '\r' && str[i+1] != '\n') {
+                ending = EOL_CR;
+                break;
+            }
+            if (str[i] == '\r' && str[i+1] == '\n') {
+                ending = EOL_CRLF;
+                break;
+            }
+            if (str[i] == '\n') {
+                ending = EOL_LF;
+                break;
+            }
+        }
+
+        free(str);
+    }
+    fclose(f);
+
+    {
+        char s[16] = {0};
+        switch (ending) {
+        case EOL_UNKNOWN: strcpy(s, "Unknown"); break;
+        case EOL_CR: strcpy(s, "CR"); break;
+        case EOL_LF: strcpy(s, "LF"); break;
+        case EOL_CRLF: strcpy(s, "CRLF"); break;
+        }
+        
+        printf("End of line sequence: %s\n", s); fflush(stdout);
+    }
+
+    return ending;
+}
+
 /* Save buffer to file. */
 void buffer_save(struct Buffer *buf) {
     char msg[80] = {0};
-    FILE *f;
     int i;
 
-    f = fopen(buf->name, "wb");
-    if (!f) {
-        fprintf(stderr, "Error opening file!\n"); fflush(stdout);
-        return;
+    if (buf->eol_sequence == EOL_UNKNOWN) {
+        if (access(buf->name, F_OK) != -1) {
+            buf->eol_sequence = buffer_find_eol_sequence(buf);
+        } else {
+            buf->eol_sequence = EOL_CRLF;
+        }
     }
+
+    FILE *f = fopen(buf->name, "wb");
 
     for (i = 0; i < buf->length; ++i) {
         fputs(buf->lines[i].string, f);
-        fputs("\n", f);
+
+        switch (buf->eol_sequence) {
+        case EOL_CRLF:
+            fputs("\r\n", f);
+            break;
+        case EOL_CR:
+            fputs("\r", f);
+            break;
+        case EOL_LF:
+            fputs("\n", f);
+            break;
+        }
     }
 
     strcat(msg, "Wrote to ");

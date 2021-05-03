@@ -40,7 +40,6 @@ static inline void *_talloc(size_t size) {
     return ptr;
 }
 
-
 static inline void *_tcalloc(size_t count, size_t size) {
     void *ptr = calloc(count, size);
     if (!ptr) {
@@ -52,6 +51,25 @@ static inline void *_tcalloc(size_t count, size_t size) {
     }
 
     return ptr;
+}
+
+static inline char *read_file(FILE *f, size_t *l) {
+    char *str;
+    
+    long p;
+    size_t length;
+    
+    p = ftell(f);
+    fseek(f, 0, SEEK_END);
+    length = ftell(f);
+    fseek(f, p, SEEK_SET);
+
+    str = tcalloc(length, 1);
+    fread(str, 1, length, f);
+
+    if (l) *l = length;
+
+    return str;
 }
 
 #endif  /* UTIL_H_ */

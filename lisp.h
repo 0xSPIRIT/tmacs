@@ -2,7 +2,6 @@
 #define LISP_H_
 
 #include <SDL2/SDL.h>
-#include <SDL2/SDL_keycode.h>
 
 enum {
     TOKEN_FUNCTION,
@@ -12,8 +11,8 @@ enum {
 };
 
 struct Token {
-    int token;
-    char name[64];
+    int token;                  /* Token identifier */
+    char name[64];              /* String data of the token. */
 };
 
 struct Key_Chord {
@@ -24,7 +23,6 @@ struct Key_Chord {
 /* Loads a file defining keyboard shortcuts for functions. */
 struct Lisp {
     struct Key_Chord *chords;
-    enum Functions *funcs;
     
     int count;
 };

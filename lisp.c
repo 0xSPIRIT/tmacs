@@ -6,6 +6,7 @@
 #include "util.h"
 #include "buffer.h"
 
+/* Interpret a lisp file and save keybindings to memory. */
 struct Lisp *lisp_interpret(const char *file) {
     struct Lisp *lisp;
     
@@ -61,13 +62,29 @@ struct Lisp *lisp_interpret(const char *file) {
             }
             i++;
         }
-        
+        lisp->count = j;
 
         /* Set token types. */
         i=0; j=0;
+        
+        for (i = 0; i < lisp->count; ++i) {
+            if (*words[i].name == '(') {
+                words[i].token = TOKEN_START_FUNCTION;
+                j=0;
+            } else if (*words[i].name == ')') {
+                words[i].token = TOKEN_END_FUNCTION;
+            } else {
+                if (j == 0) {
+                    words[i].token = TOKEN_FUNCTION;
+                    j++;
+                } else {
+                    words[i].token = TOKEN_IDENTIFIER;
+                }
+            }
+        }
 
-        for (int x = 0; x < j; ++x) {
-            LOG(words[x].name);
+        for (int x = 0; x < lisp->count; ++x) {
+            printf("%d: %s\n", words[x].token, words[x].name);
         }
     }
 

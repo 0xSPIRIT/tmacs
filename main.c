@@ -66,10 +66,6 @@ int main(int argc, char **argv) {
     cbuf = buffers[0];
     if (init_fn) {
         buffer_load_file(cbuf, init_fn);
-    } else {
-        line_insert_str(cbuf->lines + 0, "--- tMACS ---");
-        line_center(cbuf->lines + 0, char_w);
-        buffer_newline();
     }
 
     buffers[1] = minibuf = buffer_new("minibuffer", true);
@@ -419,6 +415,7 @@ int main(int argc, char **argv) {
     
     return 0;
 }
+
 
 
 
