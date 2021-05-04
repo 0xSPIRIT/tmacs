@@ -15,6 +15,8 @@
 #include "mark.h"
 #include "lisp.h"
 
+int vsync = false;
+
 SDL_Window *window;
 SDL_Renderer *renderer;
 
@@ -32,11 +34,11 @@ int main(int argc, char **argv) {
     Uint8 point_alpha = 255;
 
     char *init_fn = NULL;
-
+    
     if (argc == 2) {
         init_fn = argv[1];
     }
-    
+
     SDL_Init(SDL_INIT_EVERYTHING);
     TTF_Init();
 
@@ -46,14 +48,16 @@ int main(int argc, char **argv) {
                               window_width,
                               window_height,
                               SDL_WINDOW_RESIZABLE);
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
+    renderer = SDL_CreateRenderer(window, -1, vsync ? SDL_RENDERER_PRESENTVSYNC : 0); /* Vsync because smooth scrolling. */
     running = true;
+
     
+
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
     lisp = lisp_interpret("testlisp.l");
     lisp_free(lisp);
-    
+
     font = TTF_OpenFont("fonts/consola.ttf", 19);
     if (!font) {
         fprintf(stderr, "Failed to open font.");
@@ -74,14 +78,16 @@ int main(int argc, char **argv) {
     
     SDL_SetWindowTitle(window, cbuf->name);
 
-    Uint32 point_time = 0, last = SDL_GetTicks();
+    Uint32 point_time = 0,
+        last = SDL_GetTicks(),
+        delta = 0;
 
     while (running) {
         SDL_Event event;
         SDL_Rect point_rect, clear_rect;
         const Uint8 *keys;
 
-        point_time += SDL_GetTicks() - last;
+        point_time += (delta = SDL_GetTicks() - last);
         last = SDL_GetTicks();
 
         keys = SDL_GetKeyboardState(NULL);
@@ -211,11 +217,17 @@ int main(int argc, char **argv) {
                     }
                     break;
                     
-                case SDLK_PAGEDOWN:
-                    cbuf->desired_yoff += window_height - char_h * 5;
+                case SDLK_PAGEDOWN:;
+                    int d = (minibuf->y-char_h);
+                    d /= char_h;
+                    d *= char_h;
+                    cbuf->desired_yoff += d;
                     break;
-                case SDLK_PAGEUP:
-                    cbuf->desired_yoff -= window_height - char_h * 5;
+                case SDLK_PAGEUP:;
+                    int e = (minibuf->y-char_h);
+                    e /= char_h;
+                    e *= char_h;
+                    cbuf->desired_yoff -= e;
                     if (cbuf->desired_yoff < 0) cbuf->desired_yoff = 0;
                     break;
                     
@@ -341,7 +353,7 @@ int main(int argc, char **argv) {
         int mx, my;
         Uint32 mouse = SDL_GetMouseState(&mx, &my);
 
-        cbuf->yoff = lerp(cbuf->yoff, cbuf->desired_yoff, 0.25);
+        cbuf->yoff = lerp(cbuf->yoff, cbuf->desired_yoff, delta * 0.0125f);
 
         if (mouse & SDL_BUTTON(SDL_BUTTON_LEFT)) {
             point_x = (int)(mx / char_w);
@@ -377,11 +389,11 @@ int main(int argc, char **argv) {
         SDL_SetRenderDrawColor(renderer, 33, 33, 33, 255);
         SDL_RenderFillRect(renderer, &clear_rect);
             
-        if (!cbuf->is_minibuf) {
+        /* if (!cbuf->is_minibuf) { */
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, point_alpha);
-        } else {
-            SDL_SetRenderDrawColor(renderer, 255, 0, 0, point_alpha);
-        }
+        /* } else { */
+        /*     SDL_SetRenderDrawColor(renderer, 255, 0, 0, point_alpha); */
+        /* } */
         SDL_RenderDrawRect(renderer, &point_rect);
         
         buffer_draw(renderer, font, minibuf); /* aka buffers[1] */
@@ -415,6 +427,7 @@ int main(int argc, char **argv) {
     
     return 0;
 }
+
 
 
 

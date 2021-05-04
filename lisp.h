@@ -23,7 +23,6 @@ struct Key_Chord {
 /* Loads a file defining keyboard shortcuts for functions. */
 struct Lisp {
     struct Key_Chord *chords;
-    
     int count;
 };
 

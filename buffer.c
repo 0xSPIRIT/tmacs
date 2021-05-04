@@ -30,7 +30,7 @@ struct Buffer *buffer_new(const char *name, bool minibuf) {
     b->is_minibuf = minibuf;
     b->name = tcalloc(128, 1);
     
-    b->eol_sequence = EOL_UNKNOWN;
+    b->eol = EOL_UNKNOWN;
 
     b->x = 0;
     b->y = 0;
@@ -188,7 +188,7 @@ void buffer_load_file(struct Buffer *buf, char *file) {
         return;
     } else {
         fclose(f);
-        buf->eol_sequence = buffer_find_eol_sequence(buf);
+        buf->eol = buffer_find_eol_sequence(buf);
         f = fopen(file, "r");
     }
 
@@ -283,11 +283,11 @@ void buffer_save(struct Buffer *buf) {
     char msg[80] = {0};
     int i;
 
-    if (buf->eol_sequence == EOL_UNKNOWN) {
+    if (buf->eol == EOL_UNKNOWN) {
         if (access(buf->name, F_OK) != -1) {
-            buf->eol_sequence = buffer_find_eol_sequence(buf);
+            buf->eol = buffer_find_eol_sequence(buf);
         } else {
-            buf->eol_sequence = EOL_CRLF;
+            buf->eol = EOL_CRLF;
         }
     }
 
@@ -296,7 +296,7 @@ void buffer_save(struct Buffer *buf) {
     for (i = 0; i < buf->length; ++i) {
         fputs(buf->lines[i].string, f);
 
-        switch (buf->eol_sequence) {
+        switch (buf->eol) {
         case EOL_CRLF:
             fputs("\r\n", f);
             break;

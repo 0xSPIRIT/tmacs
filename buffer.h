@@ -25,13 +25,13 @@ struct Buffer {
 
     bool is_minibuf;
 
-    int  eol_sequence;
+    int  eol;
     
     int  capacity, length;
 
     int  px, py;                 /* Last location of point_x and point_y */
     int  x, y;                   /* Position of buffer on-screen. */
-    int  yoff, desired_yoff;
+    float yoff, desired_yoff;
 };
 
 extern struct Buffer *cbuf;
