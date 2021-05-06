@@ -11,10 +11,8 @@
 struct Mark {
     bool on;
     
-    int start_x;
-    int start_y;
-    int end_x;
-    int end_y;
+    int sx, ex;
+    int y;
 };
 
 extern struct Mark mark;

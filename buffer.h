@@ -9,9 +9,13 @@
 #include "line.h"
 #include "minibuffer.h"
 
+#define BUFFERS_MAX 32
+#define FNAME_MAX   256
+
 extern int point_x;
 extern int point_y;
 
+/* End of Line Sequences */
 enum {
     EOL_UNKNOWN = 0,
     EOL_LF,
@@ -25,7 +29,7 @@ struct Buffer {
 
     bool is_minibuf;
 
-    int  eol;
+    int  eol;                   /* End of line char sequence. */
     
     int  capacity, length;
 
@@ -36,7 +40,7 @@ struct Buffer {
 
 extern struct Buffer *cbuf;
 extern struct Buffer *minibuf;
-extern struct Buffer *buffers[32];
+extern struct Buffer *buffers[BUFFERS_MAX];
 
 extern bool insert_mode;
 
@@ -49,7 +53,6 @@ void buffer_reset(struct Buffer *buf);
 void buffer_save(struct Buffer *buf);
 void buffer_save_new(struct Buffer *buf, const char *name);
 void buffer_load_file(struct Buffer *buf, char *file);
-
 int buffer_find_eol_sequence(struct Buffer *buf);
 
 #endif  /* BUFFER_H_ */

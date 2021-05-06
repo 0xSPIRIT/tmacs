@@ -18,8 +18,8 @@ extern bool running;
 
 #define lerp(a, b, c) (((b) - (a)) * (c) + (a))
 
-#define talloc(size) (_talloc(size))
-#define tcalloc(count, size) (_tcalloc(count, size))
+#define talloc(size) (_talloc(size, __func__, __FILE__, __LINE__))
+#define tcalloc(count, size) (_tcalloc(count, size, __func__, __FILE__, __LINE__))
     
 #define LOG(x) (puts(x), fflush(stdout))
 
@@ -27,11 +27,12 @@ extern bool running;
 #define is_shift_held(k) (k[SDL_SCANCODE_LSHIFT] || k[SDL_SCANCODE_RSHIFT])
 #define is_meta_held(k) (k[SDL_SCANCODE_LALT] || k[SDL_SCANCODE_RALT])
 
-static inline void *_talloc(size_t size) {
+
+static inline void *_talloc(size_t size, const char *func, const char *file, const int line) {
     void *ptr = malloc(size);
     if (!ptr) {
         char msg[256] = {0};
-        sprintf(msg, "Allocation error at in file %s and line %d.", __FILE__, __LINE__);
+        sprintf(msg, "Allocation error in function %s in file %s and line %d.", func, file, line);
         
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Allocation Error", msg, window);
         exit(1);
@@ -40,11 +41,11 @@ static inline void *_talloc(size_t size) {
     return ptr;
 }
 
-static inline void *_tcalloc(size_t count, size_t size) {
+static inline void *_tcalloc(size_t count, size_t size, const char *func, const char *file, const int line) {
     void *ptr = calloc(count, size);
     if (!ptr) {
         char msg[256] = {0};
-        sprintf(msg, "Allocation error at in file %s and line %d.", __FILE__, __LINE__);
+        sprintf(msg, "Allocation error in function %s in file %s and line %d.", func, file, line);
         
         SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Allocation Error", msg, window);
         exit(1);

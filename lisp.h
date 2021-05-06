@@ -3,6 +3,8 @@
 
 #include <SDL2/SDL.h>
 
+#define VARS_MAX 256
+
 enum {
     TOKEN_FUNCTION,
     TOKEN_IDENTIFIER,
@@ -20,11 +22,17 @@ struct Key_Chord {
     SDL_Keycode key;            /* Actual key */
 };
 
+struct Variable {
+    char c;
+};
+
 /* Loads a file defining keyboard shortcuts for functions. */
 struct Lisp {
     struct Key_Chord *chords;
     int count;
 };
+
+extern struct Variable uservars[VARS_MAX];
 
 struct Lisp *lisp_interpret(const char *file);
 void lisp_free(struct Lisp *lisp);

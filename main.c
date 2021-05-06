@@ -48,10 +48,8 @@ int main(int argc, char **argv) {
                               window_width,
                               window_height,
                               SDL_WINDOW_RESIZABLE);
-    renderer = SDL_CreateRenderer(window, -1, vsync ? SDL_RENDERER_PRESENTVSYNC : 0); /* Vsync because smooth scrolling. */
+    renderer = SDL_CreateRenderer(window, -1, vsync ? SDL_RENDERER_PRESENTVSYNC : 0);
     running = true;
-
-    
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
@@ -396,7 +394,7 @@ int main(int argc, char **argv) {
         /* } */
         SDL_RenderDrawRect(renderer, &point_rect);
         
-        buffer_draw(renderer, font, minibuf); /* aka buffers[1] */
+        buffer_draw(renderer, font, minibuf);
 
         if (cbuf != minibuf) {
             modeline_draw(renderer, font, cbuf);
@@ -409,9 +407,6 @@ int main(int argc, char **argv) {
         cbuf->px = point_x;
         cbuf->py = point_y;
     }
-
-    /* buffer_free(cbuf); */
-    /* buffer_free(minibuf); */
 
     for (int i = 0; i < 32; ++i) {
         if (buffers[i]) buffer_free(buffers[i]);
@@ -427,8 +422,3 @@ int main(int argc, char **argv) {
     
     return 0;
 }
-
-
-
-
-

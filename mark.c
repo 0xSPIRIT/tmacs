@@ -9,15 +9,13 @@ struct Mark mark = {0};         /* Global mark. This should probably be a per-bu
 
 void mark_start(int sx, int sy) {
     mark.on = true;
-    mark.start_x = sx;
-    mark.start_y = sy;
-    mark.end_x = sx;
-    mark.end_y = sy;
+    mark.sx = sx;
+    mark.ex = sx;
+    mark.y = sy;
 }
 
 void mark_update(int ex, int ey) {
-    mark.end_x = ex;
-    mark.end_y = ey;
+    mark.ex = ex;
 }
 
 void mark_reset() {
@@ -30,10 +28,10 @@ void mark_draw(SDL_Renderer *renderer, struct Buffer *buf, TTF_Font *font) {
 
     TTF_SizeText(font, "-", &char_w, &char_h);
 
-    mark_rect.x = mark.start_x * char_w;
-    mark_rect.y = mark.start_y * char_h - buf->yoff;
-    mark_rect.w = (mark.end_x - mark.start_x) * char_w;
-    mark_rect.h = (mark.end_y - mark.start_y + 1) * char_h;
+    mark_rect.x = mark.sx * char_w;
+    mark_rect.y = mark.y * char_h - buf->yoff;
+    mark_rect.w = (mark.ex - mark.sx) * char_w;
+    mark_rect.h = (mark.y - mark.y + 1) * char_h;
 
     SDL_SetRenderDrawColor(renderer, 200, 0, 0, 255);
     SDL_RenderFillRect(renderer, &mark_rect);
@@ -42,9 +40,9 @@ void mark_draw(SDL_Renderer *renderer, struct Buffer *buf, TTF_Font *font) {
 void mark_copy(struct Buffer *buf) {
     char *s;
     
-    if (mark.start_x < mark.end_x) {
-        s = tcalloc(mark.end_x - mark.start_x + 5, 1);
-        strncpy(s, buf->lines[mark.start_y].string + mark.start_x, mark.end_x - mark.start_x);
+    if (mark.sx < mark.ex) {
+        s = tcalloc(mark.ex - mark.sx + 5, 1);
+        strncpy(s, buf->lines[mark.y].string + mark.sx, mark.ex - mark.sx);
         SDL_SetClipboardText(s);
     }
 
@@ -54,24 +52,24 @@ void mark_copy(struct Buffer *buf) {
 void mark_kill(struct Buffer *buf) {
     char *s;
 
-    if (mark.start_x < mark.end_x) {
-        s = tcalloc(mark.end_x - mark.start_x + 1, 1);
-        strncpy(s, buf->lines[mark.start_y].string + mark.start_x, mark.end_x - mark.start_x - 1);
-        line_cut_str(buf->lines+mark.start_y, mark.start_x, mark.end_x-1);
+    if (mark.sx < mark.ex) {
+        s = tcalloc(mark.ex - mark.sx + 1, 1);
+        strncpy(s, buf->lines[mark.y].string + mark.sx, mark.ex - mark.sx - 1);
+        line_cut_str(buf->lines+mark.y, mark.sx, mark.ex);
         SDL_SetClipboardText(s);
         LOG(s);
         free(s);
-    } else if (mark.start_x > mark.end_x) {
-        s = tcalloc(mark.start_x - mark.end_x + 1, 1);
-        strncpy(s, buf->lines[mark.start_y].string + mark.end_x, mark.start_x - mark.end_x-1);
-        line_cut_str(buf->lines+mark.start_y, mark.end_x, mark.start_x-1);
+    } else if (mark.sx > mark.ex) {
+        s = tcalloc(mark.sx - mark.ex + 1, 1);
+        strncpy(s, buf->lines[mark.y].string + mark.ex, mark.sx - mark.ex-1);
+        line_cut_str(buf->lines+mark.y, mark.ex, mark.sx);
         SDL_SetClipboardText(s);
         LOG(s);
         free(s);
     }
 
-    point_x = mark.start_x;
-    point_y = mark.start_y;
+    point_x = mark.sx;
+    point_y = mark.y;
     
     mark_reset();
 }

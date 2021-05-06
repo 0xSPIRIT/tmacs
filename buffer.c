@@ -12,10 +12,11 @@
 int point_x = 0;
 int point_y = 0;
 
+bool insert_mode = false;
+
 struct Buffer *cbuf = NULL;
 struct Buffer *minibuf;
-struct Buffer *buffers[32] = {0};
-bool insert_mode = false;
+struct Buffer *buffers[BUFFERS_MAX] = {0};
 
 /* Allocates and instantiates a new text buffer. */
 struct Buffer *buffer_new(const char *name, bool minibuf) {
@@ -28,7 +29,7 @@ struct Buffer *buffer_new(const char *name, bool minibuf) {
     b->length = 1;
     b->lines = tcalloc(b->capacity, sizeof(struct Line));
     b->is_minibuf = minibuf;
-    b->name = tcalloc(128, 1);
+    b->name = tcalloc(FNAME_MAX, 1);
     
     b->eol = EOL_UNKNOWN;
 
