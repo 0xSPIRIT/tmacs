@@ -22,7 +22,7 @@ int window_width = 640;
 int window_height = 720;
 
 bool running;
-
+    
 int main(int argc, char **argv) {
     struct Lisp *lisp;
     
@@ -33,11 +33,6 @@ int main(int argc, char **argv) {
 
     char *init_fn = NULL;
     
-    int vsync;
-    int smooth_scroll;
-    int tab_width;
-    int scroll_amount;
-    
     if (argc == 2) {
         init_fn = argv[1];
     }
@@ -47,10 +42,13 @@ int main(int argc, char **argv) {
 
     /* This is slow; if we're going to have to do this for dozens of variables, find a better way. Maybe hardcode the indices? */
     
-    tab_width = invars_get_value("tab-width");
-    smooth_scroll = invars_get_value("smooth-scroll");
-    vsync = invars_get_value("vsync");
-    scroll_amount = invars_get_value("scroll-amount");
+    tab_width          = invars_get_integer("tab-width");
+    smooth_scroll      = invars_get_integer("smooth-scroll");
+    vsync              = invars_get_integer("vsync");
+    scroll_amount      = invars_get_integer("scroll-amount");
+    font_size          = invars_get_integer("font-size");
+    draw_text_blended  = invars_get_integer("draw-text-blended");
+    font_name          = invars_get_string ("font");
 
     SDL_Init(SDL_INIT_EVERYTHING);
     TTF_Init();
@@ -66,12 +64,7 @@ int main(int argc, char **argv) {
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    for (int i = 0; i < invars_count; ++i) {
-        printf("%s: %d\n", invars[i].identifier, invars[i].value);
-    }
-    fflush(stdout);
-
-    font = TTF_OpenFont("fonts/consola.ttf", 19);
+    font = TTF_OpenFont(font_name, font_size);
     if (!font) {
         fprintf(stderr, "Failed to open font.");
         return 1;
@@ -305,10 +298,10 @@ int main(int argc, char **argv) {
                         cbuf->desired_yoff = point_y * char_h;
                     }
                     break;
-                case SDLK_HOME:
-                case SDLK_KP_7:
                 case SDLK_a:
                     if (is_control_held(keys)) {
+                    case SDLK_HOME:
+                    case SDLK_KP_7:
                         point_x = 0;
                         point_time = 0;
                     
@@ -375,14 +368,13 @@ int main(int argc, char **argv) {
 
         if (mouse & SDL_BUTTON(SDL_BUTTON_LEFT)) {
             point_x = (int)(mx / char_w);
-            point_y = (int)(my / char_h) + ((int)(cbuf->yoff/char_h));
+            point_y = (int)(my / char_h) + ((int)(cbuf->desired_yoff/char_h));
 
             if (point_y < 0) point_y = 0;
             if (point_y >= cbuf->length) point_y = cbuf->length - 1;
             if (point_x >= cbuf->lines[point_y].length) point_x = cbuf->lines[point_y].length;
             point_time = 0;
         }
-
         
         SDL_SetRenderDrawColor(renderer, 33, 33, 33, 255);
         SDL_RenderClear(renderer);
@@ -424,7 +416,7 @@ int main(int argc, char **argv) {
         cbuf->py = point_y;
     }
 
-    for (int i = 0; i < 32; ++i) {
+    for (int i = 0; i < BUFFERS_MAX; ++i) {
         if (buffers[i]) buffer_free(buffers[i]);
     }
 
@@ -438,5 +430,3 @@ int main(int argc, char **argv) {
     
     return 0;
 }
-
-

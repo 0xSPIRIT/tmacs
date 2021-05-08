@@ -6,26 +6,48 @@
 #include "util.h"
 #include "buffer.h"
 
-struct Pair invars[] = {
-    {"tab-width", 2},
-    {"smooth-scroll", 0},
-    {"vsync", 1},
-    {"scroll-amount", 5}
-};
-const int invars_count = ARRLEN(invars);
+int    vsync;
+int    smooth_scroll;
+int    tab_width;
+int    scroll_amount;
+int    font_size;
+int    draw_text_blended;
+char  *font_name;
 
-int invars_get_value(const char *varname) {
+struct Pair invars[] = {
+    {"tab-width", {.integer = 2}},
+    {"smooth-scroll", {.integer = 0}},
+    {"vsync", {.integer = 1}},
+    {"scroll-amount", {.integer = 5}},
+    {"font-size", {.integer = 17}},
+    {"font", {.string = "fonts/consola.ttf"}},
+    {"draw-text-blended", {.integer = 0}}
+};
+
+const unsigned invars_count = ARRLEN(invars);
+
+int invars_get_integer(const char *varname) {
     for (int i = 0; i < invars_count; ++i) {
         if (0==strcmp(varname, invars[i].identifier)) {
-            return invars[i].value;
+            return invars[i].integer;
         }
     }
     
     return -2;
 }
 
+char *invars_get_string(const char *varname) {
+    for (int i = 0; i < invars_count; ++i) {
+        if (0==strcmp(varname, invars[i].identifier)) {
+            return invars[i].string;
+        }
+    }
+    
+    return NULL;
+}
+
 static int evaluate_tokens(struct Lisp *lisp) {
-    int i;
+    int i, c;
 
     int curfunc = FUNCTION_NONE;
     int curargs = 0;
@@ -36,12 +58,17 @@ static int evaluate_tokens(struct Lisp *lisp) {
             curargs = 0;
             break;
         case TOKEN_FUNCTION:
-            curfunc = FUNCTION_SET_VARIABLE;
+            if (0==strcmp(lisp->toks[i].name, "set-int")) {
+                curfunc = FUNCTION_SET_INT;
+            }
+            if (0==strcmp(lisp->toks[i].name, "set-string")) {
+                curfunc = FUNCTION_SET_STRING;
+            }
             break;
         case TOKEN_IDENTIFIER:
             switch (curfunc) {
-            case FUNCTION_SET_VARIABLE:;
-                int c = -1;
+            case FUNCTION_SET_INT:
+                c = -1;
                 for (int j = 0; j < invars_count; ++j) {
                     if (0==strcmp(lisp->toks[i].name, invars[j].identifier)) {
                         c = j;
@@ -51,12 +78,41 @@ static int evaluate_tokens(struct Lisp *lisp) {
 
                 if (c != -1) {
                     if (lisp->toks[i+1].token == TOKEN_IDENTIFIER) {
-                        invars[c].value = atoi(lisp->toks[++i].name);
+                        invars[c].integer = atoi(lisp->toks[++i].name);
                     } else {
                         fprintf(stderr, "Error parsing lisp file!");
                         fflush(stderr);
                         return 1;
                     }
+                } else {
+                    fprintf(stderr, "Cannot find variable %s!", lisp->toks[i].name);
+                    fflush(stderr);
+                }
+                break;
+            case FUNCTION_SET_STRING:
+                c = -1;
+                for (int j = 0; j < invars_count; ++j) {
+                    if (0==strcmp(lisp->toks[i].name, invars[j].identifier)) {
+                        c = j;
+                        break;
+                    }
+                }
+
+                if (c != -1) {
+                    printf("%d\n", lisp->toks[++i].token); fflush(stdout);
+                    if (lisp->toks[i].token == TOKEN_START_STRING) {
+                        ++i;
+                        memset(invars[c].string, 0, 64);
+                        strcpy(invars[c].string, lisp->toks[i].name);
+                        ++i;    /* +1 to get past the TOKEN_END_STRING */
+                    } else {
+                        fprintf(stderr, "set-string function requires string as parameter.");
+                        fflush(stdout);
+                        return 1;
+                    }
+                } else {
+                    fprintf(stderr, "Cannot find variable %s!", lisp->toks[i].name);
+                    fflush(stderr);
                 }
                 break;
             default:
@@ -101,8 +157,9 @@ struct Lisp *lisp_interpret(const char *file) {
     struct Token *toks = tcalloc(TOKEN_MAX, sizeof(struct Token));
 
     int i=0, j=0;
-    char curtok[64] = {0};
+    char curtok[128] = {0};
     int k=0;
+    bool isinstring = false;
 
     /* Separate into tokens by newline or spaces. */
     while (src[i]) {
@@ -115,8 +172,32 @@ struct Lisp *lisp_interpret(const char *file) {
             ++i;
             continue;
         }
+        if (src[i] == '"') {
+            isinstring = !isinstring;
+            if (!isinstring) {
+                strcpy(toks[j++].name, curtok);
+            }
+            
+            strcpy(toks[j++].name, "\"");
+            
+            ++i;
+            memset(curtok, 0, 128);
+            continue;
+        }
+        
+        if (isinstring) {
+            char s[2] = { src[i], 0 };
+            
+            strcat(curtok, s);
+            ++i;
+            continue;
+        }
+        
         if (src[i] == ')') {
-            strcpy(toks[j++].name, curtok);
+            if (*curtok != 0) {
+                strcpy(toks[j++].name, curtok);
+            }
+            
             memset(curtok, 0, 64);
             k = 0;
         }
@@ -127,7 +208,7 @@ struct Lisp *lisp_interpret(const char *file) {
         if (isspace(src[i]) || src[i] == '(' || src[i] == ')') {
             if (*curtok) {
                 strcpy(toks[j++].name, curtok);
-                memset(curtok, 0, 64);
+                memset(curtok, 0, 128);
                 k = 0;
             }
         } else {
@@ -140,9 +221,17 @@ struct Lisp *lisp_interpret(const char *file) {
     lisp->count = j;
 
     /* Set token types. */
-    i=0; j=0;
+    bool str = false;
         
+    i=0; j=0;
+
     for (i = 0; i < lisp->count; ++i) {
+        if (*toks[i].name == '"') {
+            toks[i].token = !str ? TOKEN_START_STRING : TOKEN_END_STRING;
+            str = !str;
+            continue;
+        }
+        
         if (*toks[i].name == '(') {
             toks[i].token = TOKEN_START_FUNCTION;
             j=0;
@@ -173,4 +262,5 @@ void lisp_free(struct Lisp *lisp) {
     free(lisp->toks);
     free(lisp);
 }
+
 

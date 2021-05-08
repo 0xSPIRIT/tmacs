@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "util.h"
+#include "lisp.h"
 
 int point_x = 0;
 int point_y = 0;
@@ -124,7 +125,11 @@ void buffer_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buf) {
 
         if (!*str) continue;
 
-        surface = TTF_RenderText_Blended(font, str, color);
+        if (!draw_text_blended) {
+            surface = TTF_RenderText_Solid(font, str, color);
+        } else {
+            surface = TTF_RenderText_Blended(font, str, color);
+        }
         texture = SDL_CreateTextureFromSurface(renderer, surface);
 
         dst.x = buf->x;
@@ -316,5 +321,6 @@ void buffer_save(struct Buffer *buf) {
     
     fclose(f);
 }
+
 
 

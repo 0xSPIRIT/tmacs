@@ -1,0 +1,1 @@
+- Sometimes a file doesn't load correctly, has some semi-random stuff at the end of the file.

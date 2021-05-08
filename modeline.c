@@ -7,6 +7,7 @@
 #include <time.h>
 
 #include "util.h"
+#include "lisp.h"
 
 /* Draws the modeline to the screen. */
 void modeline_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buffer) {
@@ -33,8 +34,12 @@ void modeline_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buffer
     SDL_RenderFillRect(renderer, &line);
 
     sprintf(str, "%s   %d%% L%d", buffer->name, 100*point_y/buffer->length, point_y);
-    
-    surface = TTF_RenderText_Blended(font, str, color);
+
+    if (draw_text_blended) {
+        surface = TTF_RenderText_Blended(font, str, color);
+    } else {
+        surface = TTF_RenderText_Solid(font, str, color);
+    }
     texture = SDL_CreateTextureFromSurface(renderer, surface);
 
     rect.x = 12;
@@ -52,7 +57,11 @@ void modeline_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buffer
     time_str = ctime(&mytime);
     time_str[strlen(time_str)-1] = 0;
 
-    surface = TTF_RenderText_Blended(font, time_str, color);
+    if (draw_text_blended) {
+        surface = TTF_RenderText_Blended(font, time_str, color);
+    } else {
+        surface = TTF_RenderText_Solid(font, time_str, color);
+    }
     texture = SDL_CreateTextureFromSurface(renderer, surface);
 
     rect.x = window_width - surface->w - 12;
