@@ -44,6 +44,7 @@ extern struct Buffer *buffers[BUFFERS_MAX];
 
 extern bool insert_mode;
 
+
 struct Buffer *buffer_new(const char *name, bool minibuf);
 void buffer_newline();
 void buffer_cutline(int k);
@@ -56,3 +57,4 @@ void buffer_load_file(struct Buffer *buf, char *file);
 int buffer_find_eol_sequence(struct Buffer *buf);
 
 #endif  /* BUFFER_H_ */
+

@@ -20,8 +20,9 @@ extern bool running;
 
 #define talloc(size) (_talloc(size, __func__, __FILE__, __LINE__))
 #define tcalloc(count, size) (_tcalloc(count, size, __func__, __FILE__, __LINE__))
-    
+
 #define LOG(x) (puts(x), fflush(stdout))
+#define ARRLEN(x) (sizeof(x) / sizeof(*x))
 
 #define is_control_held(k) (k[SDL_SCANCODE_LCTRL] || k[SDL_SCANCODE_RCTRL])
 #define is_shift_held(k) (k[SDL_SCANCODE_LSHIFT] || k[SDL_SCANCODE_RSHIFT])

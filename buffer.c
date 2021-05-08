@@ -122,7 +122,7 @@ void buffer_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buf) {
 
         str = buf->lines[i].string;
 
-        if (!str[0]) continue;
+        if (!*str) continue;
 
         surface = TTF_RenderText_Blended(font, str, color);
         texture = SDL_CreateTextureFromSurface(renderer, surface);
@@ -316,4 +316,5 @@ void buffer_save(struct Buffer *buf) {
     
     fclose(f);
 }
+
 

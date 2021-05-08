@@ -15,8 +15,6 @@
 #include "mark.h"
 #include "lisp.h"
 
-int vsync = false;
-
 SDL_Window *window;
 SDL_Renderer *renderer;
 
@@ -35,9 +33,24 @@ int main(int argc, char **argv) {
 
     char *init_fn = NULL;
     
+    int vsync;
+    int smooth_scroll;
+    int tab_width;
+    int scroll_amount;
+    
     if (argc == 2) {
         init_fn = argv[1];
     }
+
+    lisp = lisp_interpret("config.l");
+    lisp_free(lisp);
+
+    /* This is slow; if we're going to have to do this for dozens of variables, find a better way. Maybe hardcode the indices? */
+    
+    tab_width = invars_get_value("tab-width");
+    smooth_scroll = invars_get_value("smooth-scroll");
+    vsync = invars_get_value("vsync");
+    scroll_amount = invars_get_value("scroll-amount");
 
     SDL_Init(SDL_INIT_EVERYTHING);
     TTF_Init();
@@ -53,8 +66,10 @@ int main(int argc, char **argv) {
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-    lisp = lisp_interpret("testlisp.l");
-    lisp_free(lisp);
+    for (int i = 0; i < invars_count; ++i) {
+        printf("%s: %d\n", invars[i].identifier, invars[i].value);
+    }
+    fflush(stdout);
 
     font = TTF_OpenFont("fonts/consola.ttf", 19);
     if (!font) {
@@ -104,7 +119,7 @@ int main(int argc, char **argv) {
             }
             if (event.type == SDL_MOUSEWHEEL) {
                 if (cbuf != minibuf) {
-                    cbuf->desired_yoff -= char_h * 3 * event.wheel.y;
+                    cbuf->desired_yoff -= char_h * scroll_amount * event.wheel.y;
                     if (cbuf->desired_yoff < 0) cbuf->desired_yoff = 0;
                 }
             }
@@ -230,7 +245,9 @@ int main(int argc, char **argv) {
                     break;
                     
                 case SDLK_TAB:
-                    line_insert_str(cbuf->lines + point_y, "    ");
+                    for (int i = 0; i < tab_width; ++i) {
+                        line_insert_char(cbuf->lines + point_y, ' ');
+                    }
                     point_time = 0;
                     break;
                 case SDLK_s:
@@ -245,14 +262,13 @@ int main(int argc, char **argv) {
                         point_time = 0;
                     }
                     break;
-                    
                 case SDLK_p: if (is_control_held(keys))
                 case SDLK_UP:
                     point_y--;
                     if (point_y < 0) point_y = 0;
                     if (point_x > cbuf->lines[point_y].length) point_x = cbuf->lines[point_y].length;
 
-                    if (cbuf != minibuf && point_y*char_h < cbuf->desired_yoff) {
+                    if (cbuf != minibuf && point_y * char_h < cbuf->desired_yoff) {
                         cbuf->desired_yoff = point_y * char_h;
                     }
                     
@@ -351,7 +367,11 @@ int main(int argc, char **argv) {
         int mx, my;
         Uint32 mouse = SDL_GetMouseState(&mx, &my);
 
-        cbuf->yoff = lerp(cbuf->yoff, cbuf->desired_yoff, delta * 0.0125f);
+        if (smooth_scroll) {
+            cbuf->yoff = lerp(cbuf->yoff, cbuf->desired_yoff, delta * 0.0125f);
+        } else {
+            cbuf->yoff = cbuf->desired_yoff;
+        }          
 
         if (mouse & SDL_BUTTON(SDL_BUTTON_LEFT)) {
             point_x = (int)(mx / char_w);
@@ -386,14 +406,10 @@ int main(int argc, char **argv) {
             
         SDL_SetRenderDrawColor(renderer, 33, 33, 33, 255);
         SDL_RenderFillRect(renderer, &clear_rect);
-            
-        /* if (!cbuf->is_minibuf) { */
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, point_alpha);
-        /* } else { */
-        /*     SDL_SetRenderDrawColor(renderer, 255, 0, 0, point_alpha); */
-        /* } */
-        SDL_RenderDrawRect(renderer, &point_rect);
         
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, point_alpha);
+        SDL_RenderDrawRect(renderer, &point_rect);
+
         buffer_draw(renderer, font, minibuf);
 
         if (cbuf != minibuf) {
@@ -422,3 +438,5 @@ int main(int argc, char **argv) {
     
     return 0;
 }
+
+
