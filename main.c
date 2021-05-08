@@ -38,6 +38,7 @@ int main(int argc, char **argv) {
     }
 
     lisp = lisp_interpret("config.l");
+
     lisp_free(lisp);
 
     /* This is slow; if we're going to have to do this for dozens of variables, find a better way. Maybe hardcode the indices? */
@@ -361,7 +362,7 @@ int main(int argc, char **argv) {
         Uint32 mouse = SDL_GetMouseState(&mx, &my);
 
         if (smooth_scroll) {
-            cbuf->yoff = lerp(cbuf->yoff, cbuf->desired_yoff, delta * 0.0125f);
+            cbuf->yoff = lerp(cbuf->yoff, cbuf->yoff, delta * 0.0125f);
         } else {
             cbuf->yoff = cbuf->desired_yoff;
         }          
