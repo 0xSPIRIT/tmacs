@@ -17,16 +17,17 @@ enum {
 };
 
 enum {
-  FUNCTION_NONE = 0,
-  FUNCTION_PRINT,
+    FUNCTION_NONE = 0,
+    FUNCTION_PRINT,
   
-  FUNCTION_ADD,
-  FUNCTION_SUB,
-  FUNCTION_DIV,
-  FUNCTION_MUL,
+    FUNCTION_ADD,
+    FUNCTION_SUB,
+    FUNCTION_DIV,
+    FUNCTION_MUL,
   
-  FUNCTION_SET_INT,
-  FUNCTION_SET_STRING
+    FUNCTION_SET_INT,
+    FUNCTION_SET_FLOAT,
+    FUNCTION_SET_STRING
 };
 
 enum {
@@ -62,12 +63,13 @@ struct Lisp {
     int count;
 };
 
-extern int vsync;
-extern int smooth_scroll;
-extern int tab_width;
-extern int scroll_amount;
-extern int font_size;
-extern int draw_text_blended;
+extern int   vsync;
+extern int   tab_width;
+extern int   smooth_scroll;
+extern int   scroll_amount;
+extern int   font_size;
+extern int   draw_text_blended;
+extern float scroll_speed;
 extern char *font_name;
 
 extern struct Pair invars[];
@@ -76,6 +78,7 @@ extern const unsigned invars_count;
 extern struct Pair uservars[VARS_MAX];
 extern unsigned uservars_count;
 
+float invars_get_float(const char *varname);
 int invars_get_integer(const char *varname);
 char *invars_get_string(const char *varname);
 

@@ -49,6 +49,7 @@ int main(int argc, char **argv) {
     scroll_amount      = invars_get_integer("scroll-amount");
     font_size          = invars_get_integer("font-size");
     draw_text_blended  = invars_get_integer("draw-text-blended");
+    scroll_speed       = invars_get_float("scroll-speed");
     font_name          = invars_get_string ("font");
 
     SDL_Init(SDL_INIT_EVERYTHING);
@@ -274,9 +275,10 @@ int main(int argc, char **argv) {
                     if (point_y >= cbuf->length) point_y = cbuf->length - 1;
                     if (point_x > cbuf->lines[point_y].length) point_x = cbuf->lines[point_y].length;
 
-                    if (cbuf != minibuf && point_y*char_h > window_height-char_h*2 + cbuf->desired_yoff) {
-                        cbuf->desired_yoff = point_y * char_h - window_height + 3*char_h;
+                    if (cbuf != minibuf && point_y * char_h >= char_h * (int)((cbuf->desired_yoff + minibuf->y - char_h*2) / char_h)) {
+                        cbuf->desired_yoff = (point_y * char_h) - char_h*((int)(minibuf->y - char_h*2) / char_h);
                     }
+                     
                     point_time = 0;
                     break;
                 case SDLK_b: if (is_control_held(keys))
@@ -289,7 +291,8 @@ int main(int argc, char **argv) {
                         cbuf->desired_yoff = point_y * char_h;
                     }
                     break;
-                case SDLK_f: if (is_control_held(keys))
+                case SDLK_f:
+                    if (is_control_held(keys))
                 case SDLK_RIGHT:
                     point_x++;
                     if (point_x > cbuf->lines[point_y].length) point_x = cbuf->lines[point_y].length;
@@ -362,14 +365,14 @@ int main(int argc, char **argv) {
         Uint32 mouse = SDL_GetMouseState(&mx, &my);
 
         if (smooth_scroll) {
-            cbuf->yoff = lerp(cbuf->yoff, cbuf->yoff, delta * 0.0125f);
+            cbuf->yoff = lerp(cbuf->yoff, cbuf->desired_yoff, delta * scroll_speed);
         } else {
             cbuf->yoff = cbuf->desired_yoff;
         }          
 
         if (mouse & SDL_BUTTON(SDL_BUTTON_LEFT)) {
             point_x = (int)(mx / char_w);
-            point_y = (int)(my / char_h) + ((int)(cbuf->desired_yoff/char_h));
+            point_y = (int)(my / char_h) + ((int)(cbuf->yoff/char_h));
 
             if (point_y < 0) point_y = 0;
             if (point_y >= cbuf->length) point_y = cbuf->length - 1;

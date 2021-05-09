@@ -7,13 +7,14 @@
 #include "buffer.h"
 
 /* This is dumb, just have macros defined from 0 to whatever and use that is an index into the invars array. */
-int    vsync;
-int    smooth_scroll;
-int    tab_width;
-int    scroll_amount;
-int    font_size;
-int    draw_text_blended;
-char  *font_name;
+int   vsync;
+int   tab_width;
+int   smooth_scroll;
+int   scroll_amount;
+int   font_size;
+int   draw_text_blended;
+float scroll_speed;
+char *font_name;
 
 struct Pair invars[] = {
     {"tab-width", TYPE_INT, {.integer = 2}},
@@ -22,12 +23,23 @@ struct Pair invars[] = {
     {"scroll-amount", TYPE_INT, {.integer = 5}},
     {"font-size", TYPE_INT, {.integer = 17}},
     {"font", TYPE_STRING, {.string = "fonts/consola.ttf"}},
-    {"draw-text-blended", TYPE_INT, {.integer = 0}}
+    {"draw-text-blended", TYPE_INT, {.integer = 0}},
+    {"scroll-speed", TYPE_FLOAT, {.floating = 0.0125f}}
 };
 const unsigned invars_count = ARRLEN(invars);
 
 struct Pair uservars[VARS_MAX] = {0};
 unsigned uservars_count = 0;
+
+float invars_get_float(const char *varname) {
+    for (int i = 0; i < invars_count; ++i) {
+        if (0==strcmp(varname, invars[i].identifier)) {
+            return invars[i].floating;
+        }
+    }
+
+    return -2;
+}    
 
 int invars_get_integer(const char *varname) {
     for (int i = 0; i < invars_count; ++i) {
@@ -86,6 +98,9 @@ static int evaluate_tokens(struct Lisp *lisp) {
             }
             if (0==strcmp(lisp->toks[i].name, "set-int")) {
                 curfunc = FUNCTION_SET_INT;
+            }
+            if (0==strcmp(lisp->toks[i].name, "set-float")) {
+                curfunc = FUNCTION_SET_FLOAT;
             }
             if (0==strcmp(lisp->toks[i].name, "set-string")) {
                 curfunc = FUNCTION_SET_STRING;
@@ -171,6 +186,25 @@ static int evaluate_tokens(struct Lisp *lisp) {
                     strcpy(uservars[uservars_count].identifier, lisp->toks[i].name);
                     uservars[uservars_count].type = TYPE_INT;
                     uservars[uservars_count].integer = atoi(lisp->toks[++i].name);
+                    uservars_count++;
+                }
+                break;
+            case FUNCTION_SET_FLOAT:
+                p = NULL;
+
+                if ((p = find_variable(lisp, lisp->toks[i].name))) {
+                    if (lisp->toks[i+1].token == TOKEN_IDENTIFIER) {
+                        p->floating = atof(lisp->toks[++i].name);
+                        p->type = TYPE_FLOAT;
+                    } else {
+                        fprintf(stderr, "Error parsing lisp file!");
+                        fflush(stderr);
+                        return 1;
+                    }
+                } else {
+                    strcpy(uservars[uservars_count].identifier, lisp->toks[i].name);
+                    uservars[uservars_count].type = TYPE_FLOAT;
+                    uservars[uservars_count].floating = atof(lisp->toks[++i].name);
                     uservars_count++;
                 }
                 break;

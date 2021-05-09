@@ -176,7 +176,7 @@ void buffer_load_file(struct Buffer *buf, char *file) {
 
     int ppx = point_x, ppy = point_y;
 
-    f = fopen(file, "r");
+    f = fopen(file, "rb");
     if (!f) {
         minibuffer_log("Creating new file.");
 
@@ -195,7 +195,7 @@ void buffer_load_file(struct Buffer *buf, char *file) {
     } else {
         fclose(f);
         buf->eol = buffer_find_eol_sequence(buf);
-        f = fopen(file, "r");
+        f = fopen(file, "rb");
     }
 
     cbuf = buf;
@@ -211,11 +211,13 @@ void buffer_load_file(struct Buffer *buf, char *file) {
     insert_mode = false;
 
     str = read_file(f, NULL);
-
+        
     fclose(f);
 
     while (*str) {
-        if (*str == '\n') {
+        if (*str == '\r' && *(str+1) == '\n') { ++str; continue; }
+        
+        if (*str == '\n' || *str == '\r') {
             buffer_newline();
         } else {
             line_insert_char(buf->lines+point_y, *str);
