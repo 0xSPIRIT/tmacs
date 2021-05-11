@@ -21,6 +21,35 @@ struct Buffer *buffers[BUFFERS_MAX] = {0};
 
 int buffers_count = 1;
 int buffer_index = 0;
+int buffer_previous_index = 0;
+
+/* Switches buffer_index to i. Does not set cbuf. */
+void buffer_switch(int i) {
+    buffer_previous_index = buffer_index;
+    buffer_index = i;
+    point_x = buffers[buffer_index]->px;
+    point_y = buffers[buffer_index]->py;
+}
+
+/* Kills current buffer. */
+void buffer_kill() {
+    if (buffers_count == 1) return;
+    
+    buffer_free(buffers[buffer_index]);
+
+    for (int i = buffer_index; i < buffers_count; ++i) {
+        buffers[i] = buffers[i+1];
+    }
+    buffers_count--;
+
+    if (buffer_index >= buffers_count) buffer_index = buffers_count-1;
+
+    cbuf = buffers[buffer_index];
+    point_x = cbuf->px;
+    point_y = cbuf->py;
+         
+    if (buffer_previous_index >= buffers_count) buffer_previous_index = buffers_count-1;
+}
 
 /* Allocates and instantiates a new text buffer. */
 struct Buffer *buffer_new(const char *name, bool minibuf) {
@@ -172,6 +201,7 @@ void buffer_reset(struct Buffer *buf) {
     buf->length = 1;
 }
 
+/* Loads a file's content into buf. Assumes buf is empty. */
 void buffer_load_file(struct Buffer *buf, char *file) {
     FILE *f;
     char *str;
@@ -180,7 +210,7 @@ void buffer_load_file(struct Buffer *buf, char *file) {
     if (!f) {
         minibuffer_log("Creating new file.");
 
-        buffer_reset(buf);
+        //        buffer_reset(buf);
         
         cbuf = buf;
         
@@ -200,7 +230,7 @@ void buffer_load_file(struct Buffer *buf, char *file) {
 
     cbuf = buf;
     
-    buffer_reset(buf);
+    //    buffer_reset(buf);
     
     strcpy(cbuf->name, file);
     SDL_SetWindowTitle(window, cbuf->name);

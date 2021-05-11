@@ -1,4 +1,3 @@
-#include <SDL2/SDL_keycode.h>
 #define SDL_MAIN_HANDLED
                         
 #include <SDL2/SDL.h>
@@ -6,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
 
     TTF_SizeText(font, "-", &char_w, &char_h);
 
-    buffers[0] = buffer_new("scratch-buffer", false);
+    buffers[0] = buffer_new("*scratch*", false);
     cbuf = buffers[0];
     if (init_fn) {
         buffer_load_file(cbuf, init_fn);
@@ -247,11 +247,11 @@ int main(int argc, char **argv) {
                     
                 case SDLK_TAB:
                     if (is_control_held(keys)) {
-                        buffer_index++;
-                        if (buffer_index >= buffers_count) buffer_index = 0;
+                        int c = buffer_index;
+                        c++;
+                        if (c >= buffers_count) c = 0;
+                        buffer_switch(c);
                         cbuf = buffers[buffer_index];
-                        point_x = cbuf->px;
-                        point_y = cbuf->py;
                     } else {
                         for (int i = 0; i < tab_width; ++i) {
                             line_insert_char(cbuf->lines + point_y, ' ');
@@ -259,6 +259,27 @@ int main(int argc, char **argv) {
                         point_time = 0;
                     }
                     break;
+
+                case SDLK_w:
+                    if (is_control_held(keys)) {
+                        buffer_kill();
+                    }
+                    break;
+
+                case SDLK_j:
+                    if (is_control_held(keys)) {
+                        if (cbuf == minibuf) {
+                            buffer_newline();
+                            point_time = 0;
+                        } else {
+                            minibuffer_toggle();
+                            minibuffer_log("switch ");
+                            point_x = minibuf->lines[0].length;
+                            point_time = 0;
+                        }
+                    }
+                    break;
+                    
                 case SDLK_s:
                     if (is_control_held(keys)) buffer_save(cbuf);
                     break;

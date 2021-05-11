@@ -10,4 +10,4 @@
 (set-float scroll-speed 0.04)
 
 ;; Set font
-(set-string font "fonts/consola.ttf")
+(set-string font "fonts/lucon.ttf")

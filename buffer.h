@@ -44,7 +44,11 @@ extern struct Buffer *buffers[BUFFERS_MAX];
 
 extern int buffers_count;
 extern int buffer_index;
+extern int buffer_previous_index;
 extern bool insert_mode;
+
+void buffer_switch(int i);
+void buffer_kill();
 
 struct Buffer *buffer_new(const char *name, bool minibuf);
 void buffer_newline();

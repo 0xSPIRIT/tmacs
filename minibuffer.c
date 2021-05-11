@@ -43,6 +43,9 @@ void minibuffer_execute_command() {
         ++k;
 
         if (str[i] == ' ') {
+            if (i+1 == cbuf->lines[0].length) {
+                break;
+            }
             ++j;
             ++i;
             k = 0;
@@ -50,7 +53,8 @@ void minibuffer_execute_command() {
     }
     ++j;
 
-    /* TODO: Make this account for having multiple buffers instead of hardcoding it. */
+    printf("Count: %d\n", j); fflush(stdout);
+
     if (0==strcmp(words[0], "w") || 0==strcmp(words[0], "write")) {
         if (j == 1) {
             buffer_save(buffers[buffer_index]);
@@ -64,6 +68,17 @@ void minibuffer_execute_command() {
         minibuffer_toggle();
     } else if (0==strcmp(words[0], "q") || 0==strcmp(words[0], "quit") || 0==strcmp(words[0], "exit")) {
         running = false;
+    } else if (0==strcmp(words[0], "switch")) {
+        if (j == 1) {
+            buffer_switch(buffer_previous_index);
+        } else {
+            for (int c = 0; c < buffers_count; ++c) {
+                if (0==strcmp(words[1], buffers[c]->name)) {
+                    buffer_switch(c);
+                    break;
+                }
+            }
+        }
     } else {
         minibuffer_log("Unknown Command.");
     }
