@@ -31,7 +31,7 @@ void line_insert_char(struct Line *line, int c) {
         line->string = realloc(line->string, line->capacity);
         memset(line->string + line->length, 0, add);
     }
-
+    
     if (!insert_mode) {
         for (i = line->length; i > point_x; --i) {
             line->string[i] = line->string[i-1];

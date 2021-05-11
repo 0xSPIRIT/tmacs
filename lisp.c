@@ -38,8 +38,9 @@ float invars_get_float(const char *varname) {
         }
     }
 
+    fprintf(stderr, "Could not find variable %s!\n", varname); fflush(stderr);
     return -2;
-}    
+}
 
 int invars_get_integer(const char *varname) {
     for (int i = 0; i < invars_count; ++i) {
@@ -47,7 +48,8 @@ int invars_get_integer(const char *varname) {
             return invars[i].integer;
         }
     }
-    
+
+    fprintf(stderr, "Could not find variable %s!\n", varname); fflush(stderr);    
     return -2;
 }
 
@@ -57,7 +59,8 @@ char *invars_get_string(const char *varname) {
             return invars[i].string;
         }
     }
-    
+
+    fprintf(stderr, "Could not find variable %s!\n", varname); fflush(stderr);    
     return NULL;
 }
 

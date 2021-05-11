@@ -37,13 +37,13 @@ enum {
 };
 
 struct Token {
-    int token;                  /* Token identifier */
-    char name[128];             /* String data of the token. */
+    int token;              /* Token identifier */
+    char name[128];         /* String data of the token. */
 };
 
 struct Key_Chord {
-    SDL_Keycode prefix;         /* Control, meta, shift */
-    SDL_Keycode key;            /* Actual key */
+    SDL_Keycode prefix;     /* Control, meta, shift */
+    SDL_Keycode key;        /* Actual key */
 };
 
 struct Pair {

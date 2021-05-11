@@ -8,10 +8,11 @@
 
 /* Toggle between minibuffer and the recent buffer. */
 void minibuffer_toggle() {
-    struct Buffer *temp = cbuf;
-
-    cbuf = buffers[1];
-    buffers[1] = temp;
+    if (cbuf == minibuf) {
+        cbuf = buffers[buffer_index];
+    } else {
+        cbuf = minibuf;
+    }
 
     point_x = cbuf->px;
     point_y = cbuf->py;
@@ -52,14 +53,15 @@ void minibuffer_execute_command() {
     /* TODO: Make this account for having multiple buffers instead of hardcoding it. */
     if (0==strcmp(words[0], "w") || 0==strcmp(words[0], "write")) {
         if (j == 1) {
-            buffer_save(buffers[0]);
+            buffer_save(buffers[buffer_index]);
         } else if (j == 2) {
-            buffer_save_new(buffers[0], words[1]);
+            buffer_save_new(buffers[buffer_index], words[1]);
         }
     } else if (0==strcmp(words[0], "o") || 0==strcmp(words[0], "open")) {
-        struct Buffer *c = cbuf;
-        buffer_load_file(buffers[0], words[1]);
-        cbuf = c;
+        buffers[buffers_count++] = buffer_new(words[1], false);
+        buffer_index = buffers_count-1;
+        buffer_load_file(buffers[buffer_index], words[1]);
+        minibuffer_toggle();
     } else if (0==strcmp(words[0], "q") || 0==strcmp(words[0], "quit") || 0==strcmp(words[0], "exit")) {
         running = false;
     } else {

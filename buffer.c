@@ -19,6 +19,9 @@ struct Buffer *cbuf = NULL;
 struct Buffer *minibuf;
 struct Buffer *buffers[BUFFERS_MAX] = {0};
 
+int buffers_count = 1;
+int buffer_index = 0;
+
 /* Allocates and instantiates a new text buffer. */
 struct Buffer *buffer_new(const char *name, bool minibuf) {
     struct Buffer *b;
@@ -42,7 +45,7 @@ struct Buffer *buffer_new(const char *name, bool minibuf) {
     
     b->yoff = 0;
     b->desired_yoff = 0;
-    
+
     strcpy(b->name, name);
 
     for (i = 0; i < b->capacity; ++i)
@@ -169,12 +172,9 @@ void buffer_reset(struct Buffer *buf) {
     buf->length = 1;
 }
 
-/* Free current buffer, create a new one, then load in contents of a file into the buffer. */
 void buffer_load_file(struct Buffer *buf, char *file) {
     FILE *f;
     char *str;
-
-    int ppx = point_x, ppy = point_y;
 
     f = fopen(file, "rb");
     if (!f) {
@@ -227,8 +227,8 @@ void buffer_load_file(struct Buffer *buf, char *file) {
 
     cbuf->yoff = cbuf->desired_yoff = 0;
 
-    point_x = ppx;
-    point_y = ppy;
+    point_x = 0;
+    point_y = 0;
 }
 
 /* Save buffer as a new file. */
@@ -304,6 +304,8 @@ void buffer_save(struct Buffer *buf) {
     for (i = 0; i < buf->length; ++i) {
         fputs(buf->lines[i].string, f);
 
+        if (i == buf->length-1) continue; /* Do not add an extra \n to the end. */
+        
         switch (buf->eol) {
         case EOL_CRLF:
             fputs("\r\n", f);

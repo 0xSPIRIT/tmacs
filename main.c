@@ -1,3 +1,4 @@
+#include <SDL2/SDL_keycode.h>
 #define SDL_MAIN_HANDLED
                         
 #include <SDL2/SDL.h>
@@ -43,14 +44,14 @@ int main(int argc, char **argv) {
 
     /* This is slow; if we're going to have to do this for dozens of variables, find a better way. Maybe hardcode the indices? */
     
-    tab_width          = invars_get_integer("tab-width");
-    smooth_scroll      = invars_get_integer("smooth-scroll");
-    vsync              = invars_get_integer("vsync");
-    scroll_amount      = invars_get_integer("scroll-amount");
-    font_size          = invars_get_integer("font-size");
-    draw_text_blended  = invars_get_integer("draw-text-blended");
-    scroll_speed       = invars_get_float("scroll-speed");
-    font_name          = invars_get_string ("font");
+    tab_width         = invars_get_integer("tab-width");
+    smooth_scroll     = invars_get_integer("smooth-scroll");
+    vsync             = invars_get_integer("vsync");
+    scroll_amount     = invars_get_integer("scroll-amount");
+    font_size         = invars_get_integer("font-size");
+    draw_text_blended = invars_get_integer("draw-text-blended");
+    scroll_speed      = invars_get_float  ("scroll-speed");
+    font_name         = invars_get_string ("font");
 
     SDL_Init(SDL_INIT_EVERYTHING);
     TTF_Init();
@@ -61,6 +62,11 @@ int main(int argc, char **argv) {
                               window_width,
                               window_height,
                               SDL_WINDOW_RESIZABLE);
+    if (!window) {
+        fprintf(stderr, "Could not create SDL Window");
+        return 1;
+    }
+    
     renderer = SDL_CreateRenderer(window, -1, vsync ? SDL_RENDERER_PRESENTVSYNC : 0);
     running = true;
 
@@ -80,9 +86,9 @@ int main(int argc, char **argv) {
         buffer_load_file(cbuf, init_fn);
     }
 
-    buffers[1] = minibuf = buffer_new("minibuffer", true);
-    buffers[1]->x = 10;
-    buffers[1]->y = window_height - char_h - 3;
+    buffers[BUFFERS_MAX-1] = minibuf = buffer_new("minibuffer", true);
+    buffers[BUFFERS_MAX-1]->x = 10;
+    buffers[BUFFERS_MAX-1]->y = window_height - char_h - 3;
     
     SDL_SetWindowTitle(window, cbuf->name);
 
@@ -240,10 +246,18 @@ int main(int argc, char **argv) {
                     break;
                     
                 case SDLK_TAB:
-                    for (int i = 0; i < tab_width; ++i) {
-                        line_insert_char(cbuf->lines + point_y, ' ');
+                    if (is_control_held(keys)) {
+                        buffer_index++;
+                        if (buffer_index >= buffers_count) buffer_index = 0;
+                        cbuf = buffers[buffer_index];
+                        point_x = cbuf->px;
+                        point_y = cbuf->py;
+                    } else {
+                        for (int i = 0; i < tab_width; ++i) {
+                            line_insert_char(cbuf->lines + point_y, ' ');
+                        }
+                        point_time = 0;
                     }
-                    point_time = 0;
                     break;
                 case SDLK_s:
                     if (is_control_held(keys)) buffer_save(cbuf);
@@ -368,7 +382,7 @@ int main(int argc, char **argv) {
             cbuf->yoff = lerp(cbuf->yoff, cbuf->desired_yoff, delta * scroll_speed);
         } else {
             cbuf->yoff = cbuf->desired_yoff;
-        }          
+        }
 
         if (mouse & SDL_BUTTON(SDL_BUTTON_LEFT)) {
             point_x = (int)(mx / char_w);
@@ -397,8 +411,8 @@ int main(int argc, char **argv) {
         clear_rect.y = minibuf->y - char_h;
         clear_rect.w = window_width;
         clear_rect.h = char_h*3;
-            
-        buffer_draw(renderer, font, buffers[0]);
+        
+        buffer_draw(renderer, font, buffers[buffer_index]);
             
         SDL_SetRenderDrawColor(renderer, 33, 33, 33, 255);
         SDL_RenderFillRect(renderer, &clear_rect);
@@ -408,11 +422,7 @@ int main(int argc, char **argv) {
 
         buffer_draw(renderer, font, minibuf);
 
-        if (cbuf != minibuf) {
-            modeline_draw(renderer, font, cbuf);
-        } else {
-            modeline_draw(renderer, font, buffers[0]);
-        }
+        modeline_draw(renderer, font, buffers[buffer_index]);
             
         SDL_RenderPresent(renderer);
 

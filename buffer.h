@@ -42,8 +42,9 @@ extern struct Buffer *cbuf;
 extern struct Buffer *minibuf;
 extern struct Buffer *buffers[BUFFERS_MAX];
 
+extern int buffers_count;
+extern int buffer_index;
 extern bool insert_mode;
-
 
 struct Buffer *buffer_new(const char *name, bool minibuf);
 void buffer_newline();
