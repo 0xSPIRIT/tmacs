@@ -130,7 +130,7 @@ static int evaluate_tokens(struct Lisp *lisp) {
                 if ((p = find_variable(lisp, lisp->toks[i].name))) {
                     int add = atoi(lisp->toks[++i].name);
                     
-                    if (p->type == TYPE_INT){
+                    if (p->type == TYPE_INT) {
                         if (curfunc == FUNCTION_ADD) {
                             p->integer += add;
                         } else if (curfunc == FUNCTION_SUB) {

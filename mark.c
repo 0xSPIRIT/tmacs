@@ -5,7 +5,7 @@
 
 #include "util.h"
 
-struct Mark mark = {0};         /* Global mark. This should probably be a per-buffer thing? */
+struct Mark mark = {0};         /* Global mark. This should probably be a per-buffer thing. */
 
 void mark_start(int sx, int sy) {
     mark.on = true;
@@ -52,20 +52,14 @@ void mark_copy(struct Buffer *buf) {
 void mark_kill(struct Buffer *buf) {
     char *s;
 
-    if (mark.sx < mark.ex) {
-        s = tcalloc(mark.ex - mark.sx + 1, 1);
-        strncpy(s, buf->lines[mark.y].string + mark.sx, mark.ex - mark.sx - 1);
-        line_cut_str(buf->lines+mark.y, mark.sx, mark.ex);
-        SDL_SetClipboardText(s);
-        LOG(s);
-        free(s);
-    } else if (mark.sx > mark.ex) {
-        s = tcalloc(mark.sx - mark.ex + 1, 1);
-        strncpy(s, buf->lines[mark.y].string + mark.ex, mark.sx - mark.ex-1);
-        line_cut_str(buf->lines+mark.y, mark.ex, mark.sx);
-        SDL_SetClipboardText(s);
-        LOG(s);
-        free(s);
+    s = tcalloc(mark.ex - mark.sx + 2, 1);
+    strncpy(s, buf->lines[mark.y].string + mark.sx, mark.ex - mark.sx);
+    SDL_SetClipboardText(s);
+
+    LOG(s);
+    
+    for (int i = 0; i < (mark.ex - mark.sx); ++i) {
+        line_cut_char(buf->lines + mark.y, mark.sx);
     }
 
     point_x = mark.sx;

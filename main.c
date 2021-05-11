@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <ctype.h>
 #include <stdbool.h>
 #include <string.h>
 #include <math.h>
@@ -215,7 +216,6 @@ int main(int argc, char **argv) {
                             end[cbuf->lines[point_y].length - point_x] = 0;
 
                             SDL_SetClipboardText(end);
-                            LOG(end);
 
                             line_cut_str(cbuf->lines + point_y, point_x, cbuf->lines[point_y].length);
 
@@ -281,7 +281,16 @@ int main(int argc, char **argv) {
                     break;
                     
                 case SDLK_s:
-                    if (is_control_held(keys)) buffer_save(cbuf);
+                    if (is_control_held(keys)) {
+                        if (is_shift_held(keys)) {
+                            minibuffer_toggle();
+                            minibuffer_log("write ");
+                            point_x = minibuf->lines[0].length;
+                            point_time = 0;
+                        } else {
+                            buffer_save(cbuf);
+                        }
+                    }
                     break;
                     
                 case SDLK_o:
@@ -311,12 +320,18 @@ int main(int argc, char **argv) {
                     if (point_x > cbuf->lines[point_y].length) point_x = cbuf->lines[point_y].length;
 
                     if (cbuf != minibuf && point_y * char_h >= char_h * (int)((cbuf->desired_yoff + minibuf->y - char_h*2) / char_h)) {
-                        cbuf->desired_yoff = (point_y * char_h) - char_h*((int)(minibuf->y - char_h*2) / char_h);
+                        cbuf->desired_yoff = (point_y * char_h) - char_h * ((int)(minibuf->y - char_h*2) / char_h);
                     }
                      
                     point_time = 0;
                     break;
-                case SDLK_b: if (is_control_held(keys))
+                case SDLK_b:
+                    if (is_meta_held(keys)) {
+                        while (point_x > 0 && isspace(cbuf->lines[point_y].string[--point_x]));
+                        while (point_x > 0 && !isspace(cbuf->lines[point_y].string[--point_x]));
+                    }
+
+                    if (is_control_held(keys))
                 case SDLK_LEFT:
                     point_x--;
                     if (point_x < 0) point_x = 0;
@@ -326,7 +341,13 @@ int main(int argc, char **argv) {
                         cbuf->desired_yoff = point_y * char_h;
                     }
                     break;
+                    
                 case SDLK_f:
+                    if (is_meta_held(keys)) {
+                        while (point_x < cbuf->lines[point_y].length && isspace(cbuf->lines[point_y].string[point_x++]));
+                        while (point_x < cbuf->lines[point_y].length && !isspace(cbuf->lines[point_y].string[point_x++]));
+                    }
+                    
                     if (is_control_held(keys))
                 case SDLK_RIGHT:
                     point_x++;

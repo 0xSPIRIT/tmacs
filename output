@@ -1,0 +1,15 @@
+#include <stdio.h>
+
+struct Buffer {
+    char *str;
+    int len, cap;
+};
+
+int main(void) {
+    struct Buffer *buf;
+
+    buf = malloc(sizeof(struct Buffer));
+    
+    free(buf);
+    return 0;
+}
