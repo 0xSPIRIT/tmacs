@@ -4,13 +4,13 @@
 (set-int tab-width 4)
 (set-int vsync 1)
 (set-int smooth-scroll 1)
-(set-int font-size 16)
+(set-int font-size 17)
 (set-int draw-text-blended 1)
 
-(set-float scroll-speed 0.03)
+(set-float scroll-speed 0.035)
 
 ;; Set font
-(set-string font "fonts/LiberationMono-Regular.ttf")
+(set-string font "fonts/lucon.ttf")
 
 (set-string str font)
 (print str)

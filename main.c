@@ -30,21 +30,39 @@ Uint32 point_time = 0,
 
 bool running;
 
-
 static inline void point_forward_word() {
     while (point_x < cbuf->lines[point_y].length && isspace(cbuf->lines[point_y].string[point_x++]));
     while (point_x < cbuf->lines[point_y].length && !isspace(cbuf->lines[point_y].string[point_x++]));
-    point_x--;
+    if (point_x < cbuf->lines[point_y].length) point_x--;
+    
     point_time = 0;
 }
 
 static inline void point_backward_word() {
     while (point_x > 0 && isspace(cbuf->lines[point_y].string[--point_x]));
     while (point_x > 0 && !isspace(cbuf->lines[point_y].string[--point_x]));
-    point_x++;
+    if (point_x > 0) point_x++;
+    
     point_time = 0;
 }
 
+static inline void backward_kill_word() {
+    mark_start(point_x, point_y);
+    point_backward_word();
+    mark_update(point_x, point_y);
+    mark_kill(cbuf);
+
+    point_time = 0;
+}
+
+static inline void forward_kill_word() {
+    mark_start(point_x, point_y);
+    point_forward_word();
+    mark_update(point_x, point_y);
+    mark_kill(cbuf);
+
+    point_time = 0;
+}
 
 int main(int argc, char **argv) {
     struct Lisp *lisp;
@@ -172,6 +190,8 @@ int main(int argc, char **argv) {
                             buffer_cutline(point_y);
                             if (point_y >= cbuf->length) point_y = cbuf->length - 1;
                         }
+                    } else if (is_control_held(keys)) {
+                        backward_kill_word();
                     } else if (point_x > 0) {
                         line_cut_char(&cbuf->lines[point_y], --point_x);
                     } else if (point_y > 0 && cbuf->lines[point_y].length == 0) {
@@ -197,9 +217,11 @@ int main(int argc, char **argv) {
                     insert_mode = !insert_mode;
                     point_time = 0;
                     break;
-                case SDLK_d: if (is_control_held(keys)) case SDLK_DELETE: case SDLK_KP_PERIOD:
+                case SDLK_d: if (is_control_held(keys)) {
+                    case SDLK_DELETE: case SDLK_KP_PERIOD:
                         if (point_x < cbuf->lines[point_y].length)
                             line_cut_char(cbuf->lines+point_y, point_x);
+                    } else if (is_meta_held(keys)) { forward_kill_word(); }
                     break;
                 case SDLK_SPACE:
                     break;
