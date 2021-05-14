@@ -52,6 +52,12 @@ void mark_copy(struct Buffer *buf) {
 void mark_kill(struct Buffer *buf) {
     char *s;
 
+    if (mark.ex < mark.sx) {
+        int temp = mark.ex;
+        mark.ex = mark.sx;
+        mark.sx = temp;
+    }
+    
     s = tcalloc(mark.ex - mark.sx + 2, 1);
     strncpy(s, buf->lines[mark.y].string + mark.sx, mark.ex - mark.sx);
     SDL_SetClipboardText(s);

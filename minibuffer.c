@@ -78,6 +78,9 @@ void minibuffer_execute_command() {
                     break;
                 }
             }
+
+            buffers[buffers_count++] = buffer_new(words[1], false);
+            buffer_index = buffers_count-1;
         }
     } else {
         minibuffer_log("Unknown Command.");

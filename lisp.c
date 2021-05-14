@@ -17,19 +17,27 @@ float scroll_speed;
 char *font_name;
 
 struct Pair invars[] = {
-    {"tab-width", TYPE_INT, {.integer = 2}},
-    {"smooth-scroll", TYPE_INT, {.integer = 0}},
-    {"vsync", TYPE_INT, {.integer = 1}},
-    {"scroll-amount", TYPE_INT, {.integer = 5}},
-    {"font-size", TYPE_INT, {.integer = 17}},
-    {"font", TYPE_STRING, {.string = "fonts/consola.ttf"}},
-    {"draw-text-blended", TYPE_INT, {.integer = 0}},
-    {"scroll-speed", TYPE_FLOAT, {.floating = 0.0125f}}
+    {"tab-width",         TYPE_INT,    {.integer  = 2}},
+    {"smooth-scroll",     TYPE_INT,    {.integer  = 0}},
+    {"vsync",             TYPE_INT,    {.integer  = 1}},
+    {"scroll-amount",     TYPE_INT,    {.integer  = 5}},
+    {"font-size",         TYPE_INT,    {.integer  = 17}},
+    {"font",              TYPE_STRING, {.string   = "fonts/consola.ttf"}},
+    {"draw-text-blended", TYPE_INT,    {.integer  = 0}},
+    {"scroll-speed",      TYPE_FLOAT,  {.floating = 0.0125f}}
 };
 const unsigned invars_count = ARRLEN(invars);
 
 struct Pair uservars[VARS_MAX] = {0};
 unsigned uservars_count = 0;
+
+static int is_digit(int c) {
+    return (c - '0') >= 0 && (c - '0') < 10;
+}
+
+static int is_str_num(char *str) {
+    return is_digit(str[strlen(str)-1]);
+}
 
 float invars_get_float(const char *varname) {
     for (int i = 0; i < invars_count; ++i) {
@@ -70,10 +78,7 @@ static struct Pair *find_variable(struct Lisp *lisp, const char *name) {
 
     for (int q = 0; q < 2; ++q) {
         for (int j = 0; j < count; ++j) {
-            if (0==strcmp(name, vars[j].identifier)) {
-                return &vars[j];
-                break;
-            }
+            if (0==strcmp(name, vars[j].identifier)) return &vars[j];
         }
 
         vars = uservars;
@@ -83,44 +88,29 @@ static struct Pair *find_variable(struct Lisp *lisp, const char *name) {
     return NULL;
 }
 
+/* TODO: This needs some cleaning up. Lots of repeated code, yucky. */
 static int evaluate_tokens(struct Lisp *lisp) {
     int i;
     struct Pair *p = NULL;
 
     int curfunc = FUNCTION_NONE;
-    int curargs = 0;
+    int argc = 0;
     
     for (i = 0; i < lisp->count; ++i) {
         switch (lisp->toks[i].token) {
         case TOKEN_START_FUNCTION: case TOKEN_END_FUNCTION:
-            curargs = 0;
+            argc = 0;
             break;
         case TOKEN_FUNCTION:
-            if (0==strcmp(lisp->toks[i].name, "print")) {
-                curfunc = FUNCTION_PRINT;
-            }
-            if (0==strcmp(lisp->toks[i].name, "set-int")) {
-                curfunc = FUNCTION_SET_INT;
-            }
-            if (0==strcmp(lisp->toks[i].name, "set-float")) {
-                curfunc = FUNCTION_SET_FLOAT;
-            }
-            if (0==strcmp(lisp->toks[i].name, "set-string")) {
-                curfunc = FUNCTION_SET_STRING;
-            }
+            if (0==strcmp(lisp->toks[i].name, "print"))      curfunc = FUNCTION_PRINT;
+            if (0==strcmp(lisp->toks[i].name, "set-int"))    curfunc = FUNCTION_SET_INT;
+            if (0==strcmp(lisp->toks[i].name, "set-float"))  curfunc = FUNCTION_SET_FLOAT;
+            if (0==strcmp(lisp->toks[i].name, "set-string")) curfunc = FUNCTION_SET_STRING;
             
-            if (0==strcmp(lisp->toks[i].name, "+")) {
-                curfunc = FUNCTION_ADD;
-            }
-            if (0==strcmp(lisp->toks[i].name, "-")) {
-                curfunc = FUNCTION_SUB;
-            }
-            if (0==strcmp(lisp->toks[i].name, "/")) {
-                curfunc = FUNCTION_DIV;
-            }
-            if (0==strcmp(lisp->toks[i].name, "*")) {
-                curfunc = FUNCTION_MUL;
-            }
+            if (0==strcmp(lisp->toks[i].name, "+")) curfunc = FUNCTION_ADD;
+            if (0==strcmp(lisp->toks[i].name, "-")) curfunc = FUNCTION_SUB;
+            if (0==strcmp(lisp->toks[i].name, "/")) curfunc = FUNCTION_DIV;
+            if (0==strcmp(lisp->toks[i].name, "*")) curfunc = FUNCTION_MUL;
             break;
         case TOKEN_IDENTIFIER:
             switch (curfunc) {
@@ -128,17 +118,33 @@ static int evaluate_tokens(struct Lisp *lisp) {
                 p = NULL;
 
                 if ((p = find_variable(lisp, lisp->toks[i].name))) {
-                    int add = atoi(lisp->toks[++i].name);
+                    float add;
+                    
+                    if (lisp->toks[i+1].token == TOKEN_IDENTIFIER) {
+                        struct Pair *e = find_variable(lisp, lisp->toks[++i].name);
+
+                        if (p->type == TYPE_INT) {
+                            add = e->integer;
+                        } else {
+                            add = e->floating;
+                        }
+                    } else if (lisp->toks[i+1].token == TOKEN_VALUE) {
+                        if (p->type == TYPE_INT) {
+                            add = atoi(lisp->toks[i+1].name);
+                        } else {
+                            add = atof(lisp->toks[i+1].name);
+                        }
+                    }
                     
                     if (p->type == TYPE_INT) {
                         if (curfunc == FUNCTION_ADD) {
-                            p->integer += add;
+                            p->integer += (int)add;
                         } else if (curfunc == FUNCTION_SUB) {
-                            p->integer -= add;
+                            p->integer -= (int)add;
                         } else if (curfunc == FUNCTION_MUL) {
-                            p->integer *= add;
+                            p->integer *= (int)add;
                         } else if (curfunc == FUNCTION_DIV) {
-                            p->integer /= add;
+                            p->integer /= (int)add;
                         }
                     } else if (p->type == TYPE_FLOAT) {
                         if (curfunc == FUNCTION_ADD) {
@@ -150,11 +156,7 @@ static int evaluate_tokens(struct Lisp *lisp) {
                         } else if (curfunc == FUNCTION_DIV) {
                             p->floating /= add;
                         }
-                    } else {
-                        fprintf(stderr, "Wrong variable type!\n"); fflush(stderr);
                     }
-                } else {
-                    fprintf(stderr, "Could not find variable!\n"); fflush(stderr);
                 }
                 break;
             case FUNCTION_PRINT:;
@@ -165,54 +167,61 @@ static int evaluate_tokens(struct Lisp *lisp) {
                     case TYPE_INT:
                         printf("%d\n", p->integer); fflush(stdout);
                         break;
+                    case TYPE_FLOAT:
+                        printf("%f\n", p->floating); fflush(stdout);
+                        break;
                     case TYPE_STRING:
                         printf("%s\n", p->string); fflush(stdout);
                         break;
+                    default:
+                        printf("Unknown print type.\n"); fflush(stdout);
+                        break;
                     }
-                } else {
-                    fprintf(stderr, "Could not find variable!\n"); fflush(stderr);
                 }
                 break;
-            case FUNCTION_SET_INT:
+            case FUNCTION_SET_FLOAT: case FUNCTION_SET_INT:
                 p = NULL;
 
-                if ((p = find_variable(lisp, lisp->toks[i].name))) {
-                    if (lisp->toks[i+1].token == TOKEN_IDENTIFIER) {
-                        p->integer = atoi(lisp->toks[++i].name);
-                        p->type = TYPE_INT;
-                    } else {
-                        fprintf(stderr, "Error parsing lisp file!");
-                        fflush(stderr);
-                        return 1;
-                    }
-                } else {
+                if (!(p = find_variable(lisp, lisp->toks[i].name))) {
                     strcpy(uservars[uservars_count].identifier, lisp->toks[i].name);
-                    uservars[uservars_count].type = TYPE_INT;
-                    uservars[uservars_count].integer = atoi(lisp->toks[++i].name);
                     uservars_count++;
                 }
-                break;
-            case FUNCTION_SET_FLOAT:
-                p = NULL;
 
-                if ((p = find_variable(lisp, lisp->toks[i].name))) {
-                    if (lisp->toks[i+1].token == TOKEN_IDENTIFIER) {
-                        p->floating = atof(lisp->toks[++i].name);
+                if (!p) p = &uservars[uservars_count-1];
+                
+                if (lisp->toks[i+1].token == TOKEN_IDENTIFIER) {
+                    struct Pair *e = find_variable(lisp, lisp->toks[i+1].name);
+                    
+                    if (curfunc == FUNCTION_SET_FLOAT) {
                         p->type = TYPE_FLOAT;
+                        p->floating = e->floating;
                     } else {
-                        fprintf(stderr, "Error parsing lisp file!");
-                        fflush(stderr);
-                        return 1;
+                        p->type = TYPE_INT;
+                        p->integer = e->integer;
                     }
-                } else {
-                    strcpy(uservars[uservars_count].identifier, lisp->toks[i].name);
-                    uservars[uservars_count].type = TYPE_FLOAT;
-                    uservars[uservars_count].floating = atof(lisp->toks[++i].name);
-                    uservars_count++;
+                } else if (lisp->toks[i+1].token == TOKEN_VALUE) {
+                    if (curfunc == FUNCTION_SET_FLOAT) {
+                        p->type = TYPE_FLOAT;
+                        p->floating = atof(lisp->toks[i+1].name);
+                    } else {
+                        p->type = TYPE_INT;
+                        p->integer = atoi(lisp->toks[i+1].name);
+                    }
                 }
+                break;
+
+                ++i;
                 break;
             case FUNCTION_SET_STRING:
                 p = NULL;
+
+                if (!(p = find_variable(lisp, lisp->toks[i].name))) {
+                    strcpy(uservars[uservars_count].identifier, lisp->toks[i].name);
+                    uservars[uservars_count].type = TYPE_STRING;
+                    uservars_count++;
+                }
+
+                if (!p) p = &uservars[uservars_count-1];
 
                 if ((p = find_variable(lisp, lisp->toks[i].name))) {
                     ++i;
@@ -222,24 +231,24 @@ static int evaluate_tokens(struct Lisp *lisp) {
                         memset(p->string, 0, STRING_MAX);
                         strcpy(p->string, lisp->toks[i].name);
                         ++i;    /* +1 to get past the TOKEN_END_STRING */
-                    } else {
-                        fprintf(stderr, "set-string function requires string as parameter.");
-                        fflush(stdout);
-                        return 1;
+                    } else if (lisp->toks[i].token == TOKEN_IDENTIFIER) {
+                        struct Pair *e = find_variable(lisp, lisp->toks[i].name);
+                        if (e->type != TYPE_STRING) {
+                            fprintf(stderr, "set-string requires a string to be set to");
+                            return 1;
+                        }
+                            
+                        p->type = TYPE_STRING;
+                        memset(p->string, 0, STRING_MAX);
+                        strcpy(p->string, e->string);
                     }
-                } else {
-                    strcpy(uservars[uservars_count].identifier, lisp->toks[i].name);
-                    strcpy(uservars[uservars_count].string, lisp->toks[i+=2].name);
-                    uservars[uservars_count].type = TYPE_STRING;
-                        
-                    uservars_count++;
                 }
                 break;
             default:
                 break;
             }
             
-            curargs++;
+            argc++;
             break;
         }
     }
@@ -285,9 +294,7 @@ struct Lisp *lisp_interpret(const char *file) {
     while (src[i]) {
         if (src[i] == ';') {
             /* Comment has started; skip to EOL. */
-            while (src[i] != '\n' || src[i] == 0) {
-                ++i;
-            }
+            while (src[i] != '\n' || src[i] == 0) ++i;
             
             ++i;
             continue;
@@ -351,7 +358,7 @@ struct Lisp *lisp_interpret(const char *file) {
             str = !str;
             continue;
         }
-        
+
         if (*toks[i].name == '(') {
             toks[i].token = TOKEN_START_FUNCTION;
             j=0;
@@ -361,6 +368,8 @@ struct Lisp *lisp_interpret(const char *file) {
             if (j == 0) {
                 toks[i].token = TOKEN_FUNCTION;
                 j++;
+            } else if (is_str_num(toks[i].name)) {
+                toks[i].token = TOKEN_VALUE;
             } else {
                 toks[i].token = TOKEN_IDENTIFIER;
             }

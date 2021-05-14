@@ -13,6 +13,8 @@
 #define talloc(size) (_talloc(size, __func__, __FILE__, __LINE__))
 #define tcalloc(count, size) (_tcalloc(count, size, __func__, __FILE__, __LINE__))
 
+#define tassert(ptr) (_assert(ptr, __func__, __FILE__, __LINE__))
+
 #define LOG(x) (puts(x), fflush(stdout))
 #define ARRLEN(x) (sizeof(x) / sizeof(*x))
 
@@ -29,6 +31,14 @@ extern SDL_Renderer *renderer;
 
 extern bool running;
 
+static inline void _assert(void *ptr, const char *func, const char *file, const int line) {
+    if (!ptr) {
+        char msg[256] = {0};
+        sprintf(msg, "ASSERTION ERROR at function %s, in file %s, and line %d.", func, file, line);
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "Assertion Error", msg, window);
+        exit(1);
+    }
+}
 
 static inline void *_talloc(size_t size, const char *func, const char *file, const int line) {
     void *ptr = malloc(size);

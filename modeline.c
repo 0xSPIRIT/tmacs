@@ -33,7 +33,7 @@ void modeline_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buffer
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
     SDL_RenderFillRect(renderer, &line);
 
-    sprintf(str, "%s   %d%% L%d", buffer->name, 100*point_y/buffer->length, point_y);
+    sprintf(str, "%s   %d%% L%d", buffer->name, (int)(100*(cbuf->yoff / (float)char_h)/buffer->length), point_y);
 
     if (draw_text_blended) {
         surface = TTF_RenderText_Blended(font, str, color);

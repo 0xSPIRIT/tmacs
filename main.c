@@ -1,3 +1,4 @@
+#include <SDL2/SDL_keycode.h>
 #define SDL_MAIN_HANDLED
                         
 #include <SDL2/SDL.h>
@@ -23,25 +24,53 @@ SDL_Renderer *renderer;
 int window_width = 640;
 int window_height = 720;
 
+Uint32 point_time = 0,
+    last,
+    delta = 0;
+
 bool running;
-    
+
+
+static inline void point_forward_word() {
+    while (point_x < cbuf->lines[point_y].length && isspace(cbuf->lines[point_y].string[point_x++]));
+    while (point_x < cbuf->lines[point_y].length && !isspace(cbuf->lines[point_y].string[point_x++]));
+    point_x--;
+    point_time = 0;
+}
+
+static inline void point_backward_word() {
+    while (point_x > 0 && isspace(cbuf->lines[point_y].string[--point_x]));
+    while (point_x > 0 && !isspace(cbuf->lines[point_y].string[--point_x]));
+    point_x++;
+    point_time = 0;
+}
+
+
 int main(int argc, char **argv) {
     struct Lisp *lisp;
     
     TTF_Font *font;
 
     int char_w, char_h;
+    
     Uint8 point_alpha = 255;
 
     char *init_fn = NULL;
+    char *cfg_file = "config.l";
     
-    if (argc == 2) {
-        init_fn = argv[1];
+    if (argc > 1) {
+        for (int i = 1; i < argc; ++i) {
+            if (argv[i][0] == '-') {
+                if (0==strcmp(argv[i]+1, "cfg") || 0==strcmp(argv[i]+1, "config")) {
+                    cfg_file = argv[++i];
+                }
+            } else {
+                init_fn = argv[i];
+            }
+        }
     }
 
-    lisp = lisp_interpret("config.l");
-
-    lisp_free(lisp);
+    lisp = lisp_interpret(cfg_file);
 
     /* This is slow; if we're going to have to do this for dozens of variables, find a better way. Maybe hardcode the indices? */
     
@@ -63,12 +92,11 @@ int main(int argc, char **argv) {
                               window_width,
                               window_height,
                               SDL_WINDOW_RESIZABLE);
-    if (!window) {
-        fprintf(stderr, "Could not create SDL Window");
-        return 1;
-    }
+    tassert(window);
     
     renderer = SDL_CreateRenderer(window, -1, vsync ? SDL_RENDERER_PRESENTVSYNC : 0);
+    tassert(renderer);
+    
     running = true;
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -92,11 +120,9 @@ int main(int argc, char **argv) {
     buffers[BUFFERS_MAX-1]->y = window_height - char_h - 3;
     
     SDL_SetWindowTitle(window, cbuf->name);
-
-    Uint32 point_time = 0,
-        last = SDL_GetTicks(),
-        delta = 0;
-
+    
+    last = SDL_GetTicks();
+    
     while (running) {
         SDL_Event event;
         SDL_Rect point_rect, clear_rect;
@@ -106,7 +132,7 @@ int main(int argc, char **argv) {
         last = SDL_GetTicks();
 
         keys = SDL_GetKeyboardState(NULL);
-        
+
         point_alpha = 255 * (point_time < 500);
         if (point_time >= 1000) point_time = 0;
 
@@ -172,13 +198,13 @@ int main(int argc, char **argv) {
                     point_time = 0;
                     break;
                 case SDLK_d: if (is_control_held(keys)) case SDLK_DELETE: case SDLK_KP_PERIOD:
-                    if (point_x < cbuf->lines[point_y].length)
-                        line_cut_char(cbuf->lines+point_y, point_x);
+                        if (point_x < cbuf->lines[point_y].length)
+                            line_cut_char(cbuf->lines+point_y, point_x);
                     break;
                 case SDLK_SPACE:
                     break;
                 case SDLK_g:
-                     if (is_control_held(keys)) {
+                    if (is_control_held(keys)) {
                         mark_reset();
                         minibuffer_log("");
                         if (cbuf == minibuf) {
@@ -188,12 +214,8 @@ int main(int argc, char **argv) {
                         }
                     }
                     break;
-                case SDLK_c:
-                    if (is_control_held(keys)) {
-                        mark_copy(cbuf);
-                    }
                     break;
-                case SDLK_q:
+                case SDLK_t:
                     if (is_control_held(keys)) {
                         line_center(cbuf->lines+point_y, char_w);
                     }
@@ -225,19 +247,30 @@ int main(int argc, char **argv) {
                     if (point_y >= cbuf->length) point_y = cbuf->length - 1;
                     if (point_x > cbuf->lines[point_y].length) point_x = cbuf->lines[point_y].length;
                     break;
-                case SDLK_x:
-                    if (is_control_held(keys) && mark.on) {
-                        mark_kill(cbuf);
+                case SDLK_w:
+                    if (mark.on) {
+                        if (is_control_held(keys)) {
+                            mark_kill(cbuf);
+                        } else if (is_meta_held(keys)) {
+                            mark_copy(cbuf);
+                        }
                     }
                     break;
+
+                case SDLK_v:
+                    if (is_control_held(keys)) goto pgdn;
+                    if (is_meta_held(keys)) goto pgup;
+                    break;
                     
-                case SDLK_PAGEDOWN:;
+                case SDLK_PAGEDOWN:
+                pgdn:;
                     int d = (minibuf->y-char_h);
                     d /= char_h;
                     d *= char_h;
                     cbuf->desired_yoff += d;
                     break;
-                case SDLK_PAGEUP:;
+                case SDLK_PAGEUP:
+                pgup:;
                     int e = (minibuf->y-char_h);
                     e /= char_h;
                     e *= char_h;
@@ -247,8 +280,7 @@ int main(int argc, char **argv) {
                     
                 case SDLK_TAB:
                     if (is_control_held(keys)) {
-                        int c = buffer_index;
-                        c++;
+                        int c = buffer_index + 1;
                         if (c >= buffers_count) c = 0;
                         buffer_switch(c);
                         cbuf = buffers[buffer_index];
@@ -260,7 +292,7 @@ int main(int argc, char **argv) {
                     }
                     break;
 
-                case SDLK_w:
+                case SDLK_q:
                     if (is_control_held(keys)) {
                         buffer_kill();
                     }
@@ -301,9 +333,28 @@ int main(int argc, char **argv) {
                         point_time = 0;
                     }
                     break;
-                case SDLK_p: if (is_control_held(keys))
-                case SDLK_UP:
-                    point_y--;
+                    
+                case SDLK_PERIOD:
+                    if (is_shift_held(keys) && is_meta_held(keys)) {
+                        point_y = cbuf->length-1;
+                        point_x = cbuf->lines[point_y].length;
+                        printf("%d\n", point_y); fflush(stdout);
+                        cbuf->desired_yoff = char_h*point_y - window_height / 2;
+                        point_time = 0;
+                    }
+                    break;
+                case SDLK_COMMA:
+                    if (is_shift_held(keys) && is_meta_held(keys)) {
+                        point_x = point_y = 0;
+                        cbuf->desired_yoff = 0;
+                        point_time = 0;
+                    }
+                    break;
+                    
+                case SDLK_p:
+                    if (is_control_held(keys))
+                    case SDLK_UP:
+                        point_y--;
                     if (point_y < 0) point_y = 0;
                     if (point_x > cbuf->lines[point_y].length) point_x = cbuf->lines[point_y].length;
 
@@ -313,9 +364,10 @@ int main(int argc, char **argv) {
                     
                     point_time = 0;
                     break;
-                case SDLK_n: if (is_control_held(keys))
-                case SDLK_DOWN:
-                    point_y++;
+                case SDLK_n:
+                    if (is_control_held(keys))
+                    case SDLK_DOWN:
+                        point_y++;
                     if (point_y >= cbuf->length) point_y = cbuf->length - 1;
                     if (point_x > cbuf->lines[point_y].length) point_x = cbuf->lines[point_y].length;
 
@@ -327,13 +379,17 @@ int main(int argc, char **argv) {
                     break;
                 case SDLK_b:
                     if (is_meta_held(keys)) {
-                        while (point_x > 0 && isspace(cbuf->lines[point_y].string[--point_x]));
-                        while (point_x > 0 && !isspace(cbuf->lines[point_y].string[--point_x]));
+                        point_backward_word();
+                        break;
                     }
 
                     if (is_control_held(keys))
-                case SDLK_LEFT:
-                    point_x--;
+                    case SDLK_LEFT:
+                        if (event.key.keysym.sym == SDLK_LEFT && is_control_held(keys)) {
+                            point_backward_word();
+                            break;
+                        }
+                        point_x--;
                     if (point_x < 0) point_x = 0;
                     point_time = 0;
                     
@@ -344,12 +400,17 @@ int main(int argc, char **argv) {
                     
                 case SDLK_f:
                     if (is_meta_held(keys)) {
-                        while (point_x < cbuf->lines[point_y].length && isspace(cbuf->lines[point_y].string[point_x++]));
-                        while (point_x < cbuf->lines[point_y].length && !isspace(cbuf->lines[point_y].string[point_x++]));
+                        point_forward_word();
+                        break;
                     }
                     
                     if (is_control_held(keys))
-                case SDLK_RIGHT:
+                    case SDLK_RIGHT:
+                        if (event.key.keysym.sym == SDLK_RIGHT && is_control_held(keys)) {
+                            point_forward_word();
+                            break;
+                        }
+                        
                     point_x++;
                     if (point_x > cbuf->lines[point_y].length) point_x = cbuf->lines[point_y].length;
                     point_time = 0;
@@ -370,9 +431,10 @@ int main(int argc, char **argv) {
                         }
                     }
                     break;
-                case SDLK_e: if (is_control_held(keys))
-                case SDLK_END: case SDLK_KP_1:
-                    point_x = cbuf->lines[point_y].length;
+                case SDLK_e:
+                    if (is_control_held(keys))
+                    case SDLK_END: case SDLK_KP_1:
+                        point_x = cbuf->lines[point_y].length;
                     point_time = 0;
                     
                     if (cbuf != minibuf && point_y*char_h > window_height-char_h*2 + cbuf->desired_yoff) {
@@ -380,7 +442,7 @@ int main(int argc, char **argv) {
                     }
                     break;
 
-                case SDLK_v:
+                case SDLK_y:
                     if (is_control_held(keys)) {
                         char *cb;
                         cb = SDL_GetClipboardText();
@@ -410,10 +472,11 @@ int main(int argc, char **argv) {
                     line_insert_str(&cbuf->lines[point_y], event.text.text);
                 }
 
-                point_time = 0;
-
-                if (cbuf != minibuf)
+                if (cbuf != minibuf) {
                     minibuffer_log("");
+                }
+
+                point_time = 0;
             }
         }
 
@@ -458,23 +521,28 @@ int main(int argc, char **argv) {
             
         SDL_SetRenderDrawColor(renderer, 33, 33, 33, 255);
         SDL_RenderFillRect(renderer, &clear_rect);
-        
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, point_alpha);
+
+        if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, point_alpha);
+        } else {
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 64);
+        }
         SDL_RenderDrawRect(renderer, &point_rect);
 
         buffer_draw(renderer, font, minibuf);
 
         modeline_draw(renderer, font, buffers[buffer_index]);
             
-        SDL_RenderPresent(renderer);
-
         cbuf->px = point_x;
         cbuf->py = point_y;
+
+        SDL_RenderPresent(renderer);
     }
 
     for (int i = 0; i < BUFFERS_MAX; ++i) {
         if (buffers[i]) buffer_free(buffers[i]);
     }
+    lisp_free(lisp);
 
     TTF_CloseFont(font);
     
