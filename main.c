@@ -383,7 +383,8 @@ int main(int argc, char **argv) {
                         break;
                     }
 
-                    if (is_control_held(keys))
+                    if (!is_control_held(keys)) break;
+                    
                     case SDLK_LEFT:
                         if (event.key.keysym.sym == SDLK_LEFT && is_control_held(keys)) {
                             point_backward_word();
@@ -404,7 +405,8 @@ int main(int argc, char **argv) {
                         break;
                     }
                     
-                    if (is_control_held(keys))
+                    if (!is_control_held(keys)) break;
+                    
                     case SDLK_RIGHT:
                         if (event.key.keysym.sym == SDLK_RIGHT && is_control_held(keys)) {
                             point_forward_word();
