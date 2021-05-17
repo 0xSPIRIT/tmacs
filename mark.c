@@ -144,7 +144,7 @@ void mark_kill() {
         line_cut_char(cbuf->lines+point_y, point_x);
         if (point_y == cbuf->mark.ey) cbuf->mark.ex--;
         
-        if (point_x == cbuf->lines[point_y].length) {
+        if (point_x == cbuf->lines[point_y].length && point_y != cbuf->mark.ey) {
             char *str = tcalloc(strlen(cbuf->lines[point_y+1].string)+1, 1);
                         
             strcpy(str, cbuf->lines[point_y+1].string);
@@ -157,6 +157,8 @@ void mark_kill() {
 
             point_x = 0;
             cbuf->mark.ey--;
+
+            printf("%d, %d\n", cbuf->mark.ex, cbuf->mark.ey); fflush(stdout);
         }
     }
 
