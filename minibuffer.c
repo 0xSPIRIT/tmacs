@@ -31,11 +31,9 @@ void minibuffer_toggle() {
 */
 void minibuffer_execute_command() {
     char *str = cbuf->lines[0].string;
-    char words[64][12];
+    char words[64][12] = {0};
 
     int i=0, j=0, k=0;
-
-    memset(words, 0, 64*12);
 
     while (i < cbuf->lines[0].length) {
         words[j][k] = str[i];
@@ -52,8 +50,6 @@ void minibuffer_execute_command() {
         }
     }
     ++j;
-
-    printf("Count: %d\n", j); fflush(stdout);
 
     if (0==strcmp(words[0], "w") || 0==strcmp(words[0], "write")) {
         if (j == 1) {

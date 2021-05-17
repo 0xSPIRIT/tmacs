@@ -75,6 +75,8 @@ struct Buffer *buffer_new(const char *name, bool minibuf) {
     b->yoff = 0;
     b->desired_yoff = 0;
 
+    memset(&b->mark, 0, sizeof(struct Mark));
+
     strcpy(b->name, name);
 
     for (i = 0; i < b->capacity; ++i)

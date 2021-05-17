@@ -28,7 +28,9 @@ enum {
   
     FUNCTION_SET_INT,
     FUNCTION_SET_FLOAT,
-    FUNCTION_SET_STRING
+    FUNCTION_SET_STRING,
+
+    FUNCTION_CONCATENATE
 };
 
 enum {
@@ -59,14 +61,14 @@ struct Lisp {
     int count;
 };
 
-extern int   vsync;
-extern int   tab_width;
-extern int   smooth_scroll;
-extern int   scroll_amount;
-extern int   font_size;
-extern int   draw_text_blended;
-extern float scroll_speed;
-extern char *font_name;
+extern int    vsync;
+extern int    tab_width;
+extern int    smooth_scroll;
+extern int    scroll_amount;
+extern int    font_size;
+extern int    draw_text_blended;
+extern float  scroll_speed;
+extern char  *font_name;
 
 extern struct Pair invars[];
 extern const unsigned invars_count;

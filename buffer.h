@@ -8,6 +8,7 @@
 
 #include "line.h"
 #include "minibuffer.h"
+#include "mark.h"
 
 #define BUFFERS_MAX 32
 #define FNAME_MAX   256
@@ -36,6 +37,8 @@ struct Buffer {
     int  px, py;                 /* Last location of point_x and point_y */
     int  x, y;                   /* Position of buffer on-screen. */
     float yoff, desired_yoff;
+
+    struct Mark mark;
 };
 
 extern struct Buffer *cbuf;
