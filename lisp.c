@@ -32,7 +32,7 @@ struct Pair uservars[VARS_MAX] = {0};
 unsigned uservars_count = 0;
 
 static int is_digit(int c) {
-    return (c - '0') >= 0 && (c - '0') < 10;
+    return (c - '0') >= 0 && (c - '0') <= 9;
 }
 
 static int is_str_num(char *str) {

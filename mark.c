@@ -83,39 +83,85 @@ void mark_draw(SDL_Renderer *renderer, TTF_Font *font) {
 }
 
 void mark_copy() {
-    /* char *s; */
-    /* int len; */
+    char *s;
+    int len = 0;
+    int i = 0;
 
-    /* if (cbuf->mark.sx < cbuf->mark.ex) { */
-    /*     s = tcalloc(cbuf->mark.ex - cbuf->mark.sx + 5, 1); */
-    /*     strncpy(s, cbuf->lines[cbuf->mark.y].string + cbuf->mark.sx, cbuf->mark.ex - cbuf->mark.sx); */
-    /*     SDL_SetClipboardText(s); */
-    /* } */
+    if (cbuf->mark.ey < cbuf->mark.sy) {
+        int temp = cbuf->mark.ey;
+        int temp2 = cbuf->mark.ex;
+        cbuf->mark.ey = cbuf->mark.sy;
+        cbuf->mark.ex = cbuf->mark.sx;
+        cbuf->mark.sy = temp;
+        cbuf->mark.sx = temp2;
+    }
+    if (cbuf->mark.sy == cbuf->mark.ey && cbuf->mark.ex < cbuf->mark.sx) {
+        int temp = cbuf->mark.ex;
+        cbuf->mark.ex = cbuf->mark.sx;
+        cbuf->mark.sx = temp;
+    }
+    
+    int x = cbuf->mark.sx, y = cbuf->mark.sy;
+
+    printf("%d, %d : %d, %d\n", cbuf->mark.sx, cbuf->mark.sy, cbuf->mark.ex, cbuf->mark.ey); fflush(stdout);
+
+    while (!(x == cbuf->mark.ex && y == cbuf->mark.ey)) {
+        x++;
+        if (x == cbuf->lines[y].length+1) {
+            ++y;
+            x=0;
+        }
+        
+        ++len;
+    }
+
+    s = tcalloc(len+1, 1); 
+    x = cbuf->mark.sx, y = cbuf->mark.sy;
+   
+    while (!(x == cbuf->mark.ex && y == cbuf->mark.ey)) {
+        x++;
+        if (x == cbuf->lines[y].length+1) {
+            ++y;
+            x=0;
+            s[i++] = '\n';
+        } else {
+            s[i++] = cbuf->lines[y].string[x-1];
+        }
+    }
+
+    SDL_SetClipboardText(s);
 
     mark_reset();
 }
 
 void mark_kill() {
-    /* char *s; */
+    mark_copy();
+    cbuf->mark.on = true;
 
-    /* if (cbuf->mark.ex < cbuf->mark.sx) { */
-    /*     int temp = cbuf->mark.ex; */
-    /*     cbuf->mark.ex = cbuf->mark.sx; */
-    /*     cbuf->mark.sx = temp; */
-    /* } */
-    
-    /* s = tcalloc(cbuf->mark.ex - cbuf->mark.sx + 2, 1); */
-    /* strncpy(s, cbuf->lines[cbuf->mark.y].string + cbuf->mark.sx, cbuf->mark.ex - cbuf->mark.sx); */
-    /* SDL_SetClipboardText(s); */
+    point_x = cbuf->mark.sx;
+    point_y = cbuf->mark.sy;
+    while (!(point_x == cbuf->mark.ex && point_y == cbuf->mark.ey)) {
+        line_cut_char(cbuf->lines+point_y, point_x);
+        if (point_y == cbuf->mark.ey) cbuf->mark.ex--;
+        
+        if (point_x == cbuf->lines[point_y].length) {
+            char *str = tcalloc(strlen(cbuf->lines[point_y+1].string)+1, 1);
+                        
+            strcpy(str, cbuf->lines[point_y+1].string);
 
-    /* LOG(s); */
-    
-    /* for (int i = 0; i < (cbuf->mark.ex - cbuf->mark.sx); ++i) { */
-    /*     line_cut_char(cbuf->lines + cbuf->mark.y, cbuf->mark.sx); */
-    /* } */
+            buffer_cutline(point_y+1);
 
-    /* point_x = cbuf->mark.sx; */
-    /* point_y = cbuf->mark.y; */
+            line_insert_str(cbuf->lines + point_y, str);
+
+            free(str);
+
+            point_x = 0;
+            cbuf->mark.ey--;
+        }
+    }
+
+    point_x = cbuf->mark.sx;
+    point_y = cbuf->mark.sy;
     
     mark_reset();
 }
