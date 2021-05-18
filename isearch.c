@@ -8,52 +8,51 @@
 #include "util.h"
 
 bool isearch_mode = false;
+int sx, sy;
 
 void toggle_isearch_mode() {
     isearch_mode = !isearch_mode;
-
-    memset(minibuf->lines[0].string, 0, minibuf->lines[0].capacity);
-    minibuf->length = 0;
+    sx = point_x;
+    sy = point_y;
+    line_cut_str(minibuf->lines+0, 0, minibuf->lines[0].length);
 }
 
 void isearch_add_char(int c) {
-    if (minibuf->lines[0].length >= minibuf->lines[0].capacity) {
-        minibuf->lines[0].capacity += 10;
-        minibuf->lines[0].string = realloc(minibuf->lines[0].string, minibuf->lines[0].capacity);
-        memset(minibuf->lines[0].string + minibuf->lines[0].length, 0, 10);
-    }
-    minibuf->lines[0].string[minibuf->lines[0].length++] = c;
-
-    isearch_update_point();
+    line_insert_char_at(minibuf->lines+0, c, minibuf->lines[0].length);
 }
 
 void isearch_update_point() {
-    char *curr = tcalloc(cbuf->lines[point_y].length, 1);
-    int i=0, k=0;
-    int c = cbuf->lines[point_y].string[point_x];
-    
-    while (c) {
-        if (c == minibuf->lines[0].string[i]) {
-            curr[k++] = c;
-            if (k == minibuf->lines[0].length) {
-                
-            }
-        } else {
-            memset(curr, 0, i+1);
-            k=0;
-        }
-        
-        point_x++;
-        if (point_x > cbuf->lines[point_y].length) {
-            point_y++;
-            point_x = 0;
-            if (point_y >= cbuf->length) {
-                point_x = point_y = 0;
-                toggle_isearch_mode();
-            }
-        }
-        c = cbuf->lines[point_y].string[point_x];
-    }
+    if (!minibuf->lines[0].string[0]) return;
 
-    free(curr);
+    char *curr = tcalloc(minibuf->lines[0].length, 1);
+    int i=0;
+    bool found = false;
+
+    while (!found) {
+        if (cbuf->lines[point_y].string[point_x] == minibuf->lines[0].string[i]) {
+            const char s[] = { cbuf->lines[point_y].string[point_x], 0 };
+            strcat(curr, s);
+            ++i;
+
+            printf("%d, %d\n", i, minibuf->lines[0].length); fflush(stdout);
+            
+            if (i >= minibuf->lines[0].length) {
+                LOG("FOUND");
+                found = true;
+            } else {
+                point_x = sx;
+                point_y = sy;
+            }
+        }
+
+        point_x++;
+        if (point_x >= cbuf->lines[point_y].length+1) {
+            point_x=0;
+            point_y++;
+        }
+        if (point_y > cbuf->length) {
+            LOG("A");
+            return;
+        }
+    }
 }

@@ -16,7 +16,6 @@ struct Mark {
 extern struct Mark mark;
 
 void mark_start(int sx, int sy);
-void mark_reset();
 void mark_update(int ex, int ey);
 void mark_draw(SDL_Renderer *renderer, TTF_Font *font);
 void mark_copy();

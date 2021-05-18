@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 extern bool isearch_mode;
-extern struct Isearch isearch;
+extern int sx, sy;
 
 void toggle_isearch_mode();
 void isearch_add_char(int c);

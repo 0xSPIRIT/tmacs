@@ -19,10 +19,6 @@ void mark_update(int ex, int ey) {
     cbuf->mark.ex = ex;
 }
 
-void mark_reset() {
-    cbuf->mark.on = false;
-}
-
 void mark_draw(SDL_Renderer *renderer, TTF_Font *font) {
     int char_w, char_h;
 
@@ -103,8 +99,6 @@ void mark_copy() {
     
     int x = cbuf->mark.sx, y = cbuf->mark.sy;
 
-    printf("%d, %d : %d, %d\n", cbuf->mark.sx, cbuf->mark.sy, cbuf->mark.ex, cbuf->mark.ey); fflush(stdout);
-
     while (!(x == cbuf->mark.ex && y == cbuf->mark.ey)) {
         x++;
         if (x == cbuf->lines[y].length+1) {
@@ -131,7 +125,7 @@ void mark_copy() {
 
     SDL_SetClipboardText(s);
 
-    mark_reset();
+    cbuf->mark.on = false;
 }
 
 void mark_kill() {
@@ -157,13 +151,11 @@ void mark_kill() {
 
             point_x = 0;
             cbuf->mark.ey--;
-
-            printf("%d, %d\n", cbuf->mark.ex, cbuf->mark.ey); fflush(stdout);
         }
     }
 
     point_x = cbuf->mark.sx;
     point_y = cbuf->mark.sy;
     
-    mark_reset();
+    cbuf->mark.on = false;
 }

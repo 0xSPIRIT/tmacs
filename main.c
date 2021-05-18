@@ -17,6 +17,7 @@
 #include "util.h"
 #include "mark.h"
 #include "lisp.h"
+#include "isearch.h"
 
 SDL_Window *window;
 SDL_Renderer *renderer;
@@ -185,6 +186,14 @@ int main(int argc, char **argv) {
             }
             if (event.type == SDL_KEYDOWN) {
                 switch (event.key.keysym.sym) {
+                case SDLK_x:
+                    if (!isearch_mode) {
+                        toggle_isearch_mode();
+                    } else {
+                        isearch_update_point();
+                        point_time = 0;
+                    }
+                    break;
                 case SDLK_m: if (is_control_held(keys)) {
                         minibuffer_toggle();
                         point_time = 0;
@@ -195,7 +204,13 @@ int main(int argc, char **argv) {
                     point_time = 0;
                     break;
                 case SDLK_BACKSPACE:
-                    mark_reset();
+                    if (isearch_mode) {
+                        if (minibuf->lines[0].length >= 1) {
+                            line_cut_char(minibuf->lines + 0, minibuf->lines[0].length-1);
+                        }
+                        break;
+                    }
+                    cbuf->mark.on = false;
 
                     if (is_control_held(keys) && is_shift_held(keys)) {
                         if (cbuf->length == 1) {
@@ -243,8 +258,10 @@ int main(int argc, char **argv) {
                     break;
                 case SDLK_g:
                     if (is_control_held(keys)) {
-                        mark_reset();
+                        cbuf->mark.on = false;
                         minibuffer_log("Quit");
+                        
+                        isearch_mode = false;
                         if (cbuf == minibuf) {
                             point_x = 0;
                             minibuffer_toggle();
@@ -367,7 +384,7 @@ int main(int argc, char **argv) {
                     break;
                     
                 case SDLK_o:
-                    if (is_control_held(keys)) {
+                    if (is_control_held(keys) && cbuf != minibuf) {
                         minibuffer_toggle();
                         minibuffer_log("open ");
                         point_x = minibuf->lines[0].length;
@@ -509,17 +526,23 @@ int main(int argc, char **argv) {
                 }
             }
             if (event.type == SDL_TEXTINPUT) {
-                if (*event.text.text == ' ' && is_control_held(keys)) {
-                    if (cbuf->mark.on && cbuf->mark.sx == cbuf->mark.ex && cbuf->mark.sy == cbuf->mark.ey) {
-                        mark_reset();
-                        minibuffer_log("Mark deactivated");
-                    } else {
-                        mark_start(point_x, point_y);
-                        minibuffer_log("Mark set");
-                    }
+                if (isearch_mode) {
+                    isearch_add_char(*event.text.text);
+                    isearch_update_point();
+                    point_time = 0;
                 } else {
-                    line_insert_str(&cbuf->lines[point_y], event.text.text);
-                    mark_reset();
+                    if (*event.text.text == ' ' && is_control_held(keys)) {
+                        if (cbuf->mark.on && cbuf->mark.sx == cbuf->mark.ex && cbuf->mark.sy == cbuf->mark.ey) {
+                            cbuf->mark.on = false;
+                            minibuffer_log("Mark deactivated");
+                        } else {
+                            mark_start(point_x, point_y);
+                            minibuffer_log("Mark set");
+                        }
+                    } else {
+                        line_insert_str(&cbuf->lines[point_y], event.text.text);
+                        cbuf->mark.on = false;
+                    }
                 }
 
                 point_time = 0;
@@ -528,7 +551,7 @@ int main(int argc, char **argv) {
 
         int mx, my;
         Uint32 mouse = SDL_GetMouseState(&mx, &my);
-
+        
         if (smooth_scroll) {
             cbuf->yoff = lerp(cbuf->yoff, cbuf->desired_yoff, delta * scroll_speed);
         } else {
@@ -588,7 +611,7 @@ int main(int argc, char **argv) {
 
         modeline_draw(renderer, font, buffers[buffer_index]);
 
-        if (cbuf != minibuf && (cbuf->px != point_x || cbuf->py != point_y)) {
+        if (!isearch_mode && cbuf != minibuf && (cbuf->px != point_x || cbuf->py != point_y)) {
             minibuffer_log("");
         }
             
@@ -613,3 +636,4 @@ int main(int argc, char **argv) {
     
     return 0;
 }
+°ýß´	KÅ

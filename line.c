@@ -41,6 +41,32 @@ void line_insert_char(struct Line *line, int c) {
     line->string[point_x++] = c;
 }
 
+/* Insert char at k. Reallocates when necessary. */
+void line_insert_char_at(struct Line *line, int c, int k) {
+    int i;
+
+    if (!insert_mode || point_x+1 >= line->length) {
+        line->length++;
+    }
+    
+    if (line->length >= line->capacity) {
+        int add = 10;
+        
+        line->capacity += add;
+        line->string = realloc(line->string, line->capacity);
+        memset(line->string + line->length, 0, add);
+    }
+    
+    if (!insert_mode) {
+        for (i = line->length; i > k; --i) {
+            line->string[i] = line->string[i-1];
+        }
+    }
+    
+    line->string[k] = c;
+}
+
+
 /*
    Insert string at point. Reallocates the line when necessary.
    
