@@ -31,12 +31,8 @@ const unsigned invars_count = ARRLEN(invars);
 struct Pair uservars[VARS_MAX] = {0};
 unsigned uservars_count = 0;
 
-static int is_digit(int c) {
-    return (c - '0') >= 0 && (c - '0') <= 9;
-}
-
 static int is_str_num(char *str) {
-    return is_digit(str[strlen(str)-1]);
+    return isdigit(str[strlen(str)-1]);
 }
 
 float invars_get_float(const char *varname) {

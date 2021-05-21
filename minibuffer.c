@@ -51,7 +51,7 @@ void minibuffer_execute_command() {
     }
     ++j;
 
-    if (0==strcmp(words[0], "w") || 0==strcmp(words[0], "write")) {
+    if (0==strcmp(words[0], "w") || 0==strcmp(words[0], "write") || 0==strcmp(words[0], "write-to")) {
         if (j == 1) {
             buffer_save(buffers[buffer_index]);
         } else if (j == 2) {

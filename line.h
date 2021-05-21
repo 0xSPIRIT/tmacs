@@ -14,4 +14,6 @@ void line_insert_char_at(struct Line *line, int c, int k);
 void line_cut_str(struct Line *line, int n, int k);
 void line_center(struct Line *line, int char_w);
 
+int is_line_blank(struct Line *line);
+
 #endif /* LINE_H_ */

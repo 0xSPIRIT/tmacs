@@ -1,2 +1,19 @@
-This is a test.
-This is another test.
+#include <stdio.h>
+
+struct Buffer {
+    void *buf;
+    int len, cap;
+};
+
+struct Buffer *buffer_new() {
+    struct Buffer *buf = malloc(sizeof(struct Buffer));
+    buf->len = 0;
+    buf->cap = 0;
+
+    return buf;
+}
+
+int main(void) {
+    printf("Hello, World!\n");
+    return 0;
+}

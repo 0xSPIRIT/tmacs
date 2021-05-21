@@ -24,35 +24,28 @@ void isearch_add_char(int c) {
 void isearch_update_point() {
     if (!minibuf->lines[0].string[0]) return;
 
-    char *curr = tcalloc(minibuf->lines[0].length, 1);
-    int i=0;
-    bool found = false;
+    int c=0;
 
-    while (!found) {
-        if (cbuf->lines[point_y].string[point_x] == minibuf->lines[0].string[i]) {
-            const char s[] = { cbuf->lines[point_y].string[point_x], 0 };
-            strcat(curr, s);
-            ++i;
+    point_x = sx;
+    point_y = sy;
 
-            printf("%d, %d\n", i, minibuf->lines[0].length); fflush(stdout);
-            
-            if (i >= minibuf->lines[0].length) {
-                LOG("FOUND");
-                found = true;
-            } else {
-                point_x = sx;
-                point_y = sy;
-            }
+    while (true) {
+        if (minibuf->lines[0].string[c] == cbuf->lines[point_y].string[point_x]) {
+            ++c;
+            if (c == minibuf->lines[0].length) return;
+        } else {
+            c = 0;
         }
-
+        
         point_x++;
-        if (point_x >= cbuf->lines[point_y].length+1) {
-            point_x=0;
-            point_y++;
-        }
-        if (point_y > cbuf->length) {
-            LOG("A");
+        if (point_x >= cbuf->lines[point_y].length) point_y++;
+        if (point_y > cbuf->length-1) {
+            point_x = sx;
+            point_y = sy;
             return;
         }
     }
+    
+    point_x = sx;
+    point_y = sy;
 }

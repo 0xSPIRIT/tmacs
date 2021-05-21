@@ -95,7 +95,7 @@ void buffer_newline() {
         minibuffer_toggle();
         return;
     }
-    
+
     end = tcalloc(cbuf->lines[point_y].length, 1);
     strcpy(end, cbuf->lines[point_y].string + point_x);
     
@@ -322,6 +322,14 @@ int buffer_find_eol_sequence(struct Buffer *buf) {
 void buffer_save(struct Buffer *buf) {
     char msg[80] = {0};
     int i;
+
+    if (buf->name[0] == '*') {
+        if (cbuf != minibuf) minibuffer_toggle();
+        
+        minibuffer_log("write-to ");
+        point_x = minibuf->lines[0].length;
+        return;
+    }
 
     if (buf->eol == EOL_UNKNOWN) {
         if (access(buf->name, F_OK) != -1) {

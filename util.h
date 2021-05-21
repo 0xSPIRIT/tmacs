@@ -22,6 +22,7 @@
 #define is_shift_held(k) (k[SDL_SCANCODE_LSHIFT] || k[SDL_SCANCODE_RSHIFT])
 #define is_meta_held(k) (k[SDL_SCANCODE_LALT] || k[SDL_SCANCODE_RALT])
 
+extern Uint32 point_time, last, delta;
 
 extern int window_width;
 extern int window_height;

@@ -2,6 +2,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "buffer.h"
 
@@ -126,4 +127,19 @@ void line_center(struct Line *line, int char_w) {
     if (point_x > line->length) point_x = line->length;
 
     insert_mode = im;
+}
+
+/* Checks if the line has 0 length or is solely comprised of spaces. */
+int is_line_blank(struct Line *line) {
+    if (line->length == 0) return true;
+
+    int i=0;
+    while (i < line->length) {
+        if (!isspace(line->string[i])) {
+            return false;
+        }
+        ++i;
+    }
+
+    return true;
 }
