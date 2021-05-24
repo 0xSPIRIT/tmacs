@@ -13,8 +13,6 @@ void minibuffer_toggle(void) {
     } else {
         cbuf = minibuf;
     }
-    smart_indent_mode = (cbuf != minibuf);
-    
     point_x = cbuf->px;
     point_y = cbuf->py;
     

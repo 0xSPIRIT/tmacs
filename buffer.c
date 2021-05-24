@@ -13,8 +13,6 @@
 int point_x = 0;
 int point_y = 0;
 
-int smart_indent_mode = 0;
-
 bool insert_mode = false;
 
 struct Buffer *cbuf = NULL;
@@ -88,10 +86,12 @@ struct Buffer *buffer_new(const char *name, bool minibuf) {
 }
 
 /* Adds a new line to the buffer at point. */
-void buffer_newline() {
+void buffer_newline(bool smart_indent) {
     int i;
-    char *end;
+    char *end = NULL;
     int indentation = 0;
+    
+    printf("%d\n", memory_counter); fflush(stdout);
 
     if (cbuf->is_minibuf) {
         minibuffer_execute_command();
@@ -99,15 +99,17 @@ void buffer_newline() {
         return;
     }
 
+    if (smart_indent) {
+        while (cbuf->lines[point_y].string[indentation++] == ' ');
+        --indentation;
+    }
+
     point_time = 0;
 
-    if (smart_indent_mode) {
-        while (cbuf->lines[point_y].string[indentation++] == ' ');
-        printf("%d\n", indentation); fflush(stdout);
+    if (cbuf->lines[point_y].length) {
+        end = tcalloc(cbuf->lines[point_y].length, 1);
+        strcpy(end, cbuf->lines[point_y].string + point_x);
     }
-    
-    end = tcalloc(cbuf->lines[point_y].length, 1);
-    strcpy(end, cbuf->lines[point_y].string + point_x);
     
     line_cut_str(cbuf->lines + point_y, point_x, cbuf->lines[point_y].length);
     
@@ -127,20 +129,19 @@ void buffer_newline() {
     for (i = cbuf->length-1; i > point_y; --i) {
         cbuf->lines[i] = cbuf->lines[i-1];
     }
-
-    line_new(cbuf->lines + point_y);
-    point_x = 0;
-
-    if (smart_indent_mode) {
-        for (int c = 0; c < indentation-1; ++c) {
-            line_insert_char_at(&cbuf->lines[point_y], ' ', 0);
+    
+    if (smart_indent) {
+        for (int c = 0; c < indentation; ++c) {
+            line_insert_char_at(cbuf->lines + point_y, ' ', 0);
         }
     }
+    
+    point_x = indentation;
 
-    line_insert_str(cbuf->lines + point_y, end);
-        
-    point_x = cbuf->lines[point_y].length;
-    tfree(end);
+    if (end) {
+        line_insert_str(cbuf->lines + point_y, end);
+        tfree(end);
+    }
 }
 
 /* Removes a line from the current buffer. */
@@ -196,9 +197,7 @@ void buffer_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buf) {
 
 /* Frees a buffer from memory. */
 void buffer_free(struct Buffer *buf) {
-    int i;
-
-    for (i = 0; i < buf->capacity; ++i) {
+    for (int i = 0; i < buf->capacity; ++i) {
         tfree(buf->lines[i].string);
     }
 
@@ -261,7 +260,7 @@ void buffer_load_file(struct Buffer *buf, char *file) {
         
     for (int i = 0; i < length; ++i) {
         if (str[i] == '\n') {
-            buffer_newline();
+            buffer_newline(false);
         } else {
             line_insert_char(buf->lines+point_y, str[i]);
         }
@@ -313,6 +312,3 @@ void buffer_save(struct Buffer *buf) {
     
     fclose(f);
 }
-
-
-

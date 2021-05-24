@@ -76,16 +76,16 @@ static inline bool is_separator(int c) {
 
 static inline void point_forward_paragraph() {
     point_x = 0;
-    while (point_y < cbuf->length && is_line_blank(cbuf->lines+(point_y))) {point_y++;}
-    while (point_y < cbuf->length && !is_line_blank(cbuf->lines+(point_y))) {point_y++;}
+    while (point_y < cbuf->length && is_line_blank(cbuf->lines+(point_y))) point_y++;
+    while (point_y < cbuf->length && !is_line_blank(cbuf->lines+(point_y))) point_y++;
 
     point_time = 0;
 }
 
 static inline void point_backward_paragraph() {
     point_x = 0;
-    while (point_y > 0 && is_line_blank(cbuf->lines+(point_y))) {point_y--;}
-    while (point_y > 0 && !is_line_blank(cbuf->lines+(point_y))) {point_y--;}
+    while (point_y > 0 && is_line_blank(cbuf->lines+(point_y))) point_y--;
+    while (point_y > 0 && !is_line_blank(cbuf->lines+(point_y))) point_y--;
     
     point_time = 0;
 }
@@ -282,7 +282,7 @@ int main(int argc, char **argv) {
                     }
                     break;
                 case SDLK_RETURN:
-                    buffer_newline();
+                    buffer_newline(true);
                     point_time = 0;
                     break;
                 case SDLK_BACKSPACE:
@@ -462,7 +462,7 @@ int main(int argc, char **argv) {
                 case SDLK_j:
                     if (is_control_held(keys)) {
                         if (cbuf == minibuf) {
-                            buffer_newline();
+                            buffer_newline(true);
                             point_time = 0;
                         } else {
                             minibuffer_toggle();
@@ -631,15 +631,15 @@ int main(int argc, char **argv) {
                         while (*clip) {
                             /* Handling different end-of-line character sequences. */
                             if (*clip == '\n') {
-                                LOG("- A");
-                                buffer_newline();
+                                buffer_newline(false);
+                                LOG("LF");
                             } else if (*clip == '\r' && *(clip+1) == '\n') {
-                                LOG("- B");
-                                buffer_newline();
+                                buffer_newline(false);
                                 ++clip;
+                                LOG("CRLF");
                             } else if (*clip == '\r') {
-                                LOG("- C");
-                                buffer_newline();
+                                buffer_newline(false);
+                                LOG("CR");
                             } else {
                                 line_insert_char(cbuf->lines+point_y, *clip);
                             }
@@ -719,7 +719,7 @@ int main(int argc, char **argv) {
         if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, point_alpha / 3);
         } else {
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 64);
+            SDL_SetRenderDrawColor(renderer, 200, 255, 200, 32);
         }
 
         if (insert_mode) {

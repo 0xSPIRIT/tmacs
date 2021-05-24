@@ -11,12 +11,10 @@
 #include "mark.h"
 
 #define BUFFERS_MAX 32
-#define FNAME_MAX   256
+#define FNAME_MAX   128
 
 extern int point_x;
 extern int point_y;
-
-extern int smart_indent_mode;
 
 struct Buffer {
     struct Line *lines;
@@ -46,7 +44,7 @@ void buffer_switch(int i);
 void buffer_kill();
 
 struct Buffer *buffer_new(const char *name, bool minibuf);
-void buffer_newline();
+void buffer_newline(bool smart_indent);
 void buffer_cutline(int k);
 void buffer_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buf);
 void buffer_free(struct Buffer *buf);
