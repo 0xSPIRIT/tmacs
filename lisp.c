@@ -389,13 +389,13 @@ struct Lisp *lisp_interpret(const char *file) {
 
     evaluate_tokens(lisp);
 
-    free(src);    
+    tfree(src);    
     return lisp;
 }
 
 void lisp_free(struct Lisp *lisp) {
-    free(lisp->toks);
-    free(lisp);
+    tfree(lisp->toks);
+    tfree(lisp);
 }
 
 

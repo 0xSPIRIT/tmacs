@@ -1,0 +1,19 @@
+#include "mark.h"
+
+struct Buffer {
+    char *str;
+    int cap, len;
+};
+
+int x, y;
+
+struct Buffer *buffer_new(char *initial) {
+    struct Buffer *buf = malloc(sizeof(struct Buffer));
+    
+    return buf;
+}
+
+void main(int argc, char **argv) {
+    puts(argv[argc-1]);
+    return 0;
+}

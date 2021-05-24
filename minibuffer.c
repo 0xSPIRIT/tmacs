@@ -7,13 +7,14 @@
 #include "util.h"
 
 /* Toggle between minibuffer and the recent buffer. */
-void minibuffer_toggle() {
+void minibuffer_toggle(void) {
     if (cbuf == minibuf) {
         cbuf = buffers[buffer_index];
     } else {
         cbuf = minibuf;
     }
-
+    smart_indent_mode = (cbuf != minibuf);
+    
     point_x = cbuf->px;
     point_y = cbuf->py;
     
@@ -29,18 +30,25 @@ void minibuffer_toggle() {
    Executes the current command in the minibuffer.
    Assumes that cbuf is the minibuffer.
 */
-void minibuffer_execute_command() {
+void minibuffer_execute_command(void) {
     char *str = cbuf->lines[0].string;
-    char words[64][12] = {0};
+    char words[64][32] = {0};
 
     int i=0, j=0, k=0;
+    int is_in_quote = 0;
 
     while (i < cbuf->lines[0].length) {
+        if (str[i] == '"') {
+            is_in_quote = !is_in_quote;
+            ++i;
+            continue;
+        }
+        
         words[j][k] = str[i];
         ++i;
         ++k;
 
-        if (str[i] == ' ') {
+        if (str[i] == ' ' && !is_in_quote) {
             if (i+1 == cbuf->lines[0].length) {
                 break;
             }
@@ -64,7 +72,7 @@ void minibuffer_execute_command() {
         minibuffer_toggle();
     } else if (0==strcmp(words[0], "q") || 0==strcmp(words[0], "quit") || 0==strcmp(words[0], "exit")) {
         running = false;
-    } else if (0==strcmp(words[0], "switch")) {
+    } else if (0==strcmp(words[0], "switch") || 0==strcmp(words[0], "switch-to")) {
         if (j == 1) {
             buffer_switch(buffer_previous_index);
         } else {
@@ -78,6 +86,9 @@ void minibuffer_execute_command() {
             buffers[buffers_count++] = buffer_new(words[1], false);
             buffer_index = buffers_count-1;
         }
+    } else if (0==strcmp(words[0], "shell-command")) {
+        LOG(words[1]);
+        system(words[1]);
     } else {
         minibuffer_log("Unknown Command.");
     }

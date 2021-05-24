@@ -7,17 +7,39 @@
 #include "util.h"
 #include "buffer.h"
 
+static SDL_Rect *mark_rect = NULL;
+
 void mark_start(int sx, int sy) {
     cbuf->mark.on = true;
     cbuf->mark.sx = sx;
     cbuf->mark.ex = sx;
     cbuf->mark.sy = sy;
     cbuf->mark.ey = sy;
+
+    if (mark_rect) {
+        tfree(mark_rect);
+    }
+    mark_rect = tcalloc((cbuf->mark.ey - cbuf->mark.sy) + 1, sizeof(SDL_Rect));
 }
 
 void mark_update(int ex, int ey) {
     cbuf->mark.ey = ey;
     cbuf->mark.ex = ex;
+
+    int temp = cbuf->mark.ey;
+    int temp2 = cbuf->mark.sy;
+    if (cbuf->mark.sy > cbuf->mark.ey) {
+        cbuf->mark.ey = cbuf->mark.sy;
+        cbuf->mark.sy = temp;
+    }
+    
+    if (mark_rect) {
+        tfree(mark_rect);
+    }
+    mark_rect = tcalloc((cbuf->mark.ey - cbuf->mark.sy) + 1, sizeof(SDL_Rect));
+
+    cbuf->mark.sy = temp2;
+    cbuf->mark.ey = temp;
 }
 
 void mark_draw(SDL_Renderer *renderer, TTF_Font *font) {
@@ -39,7 +61,6 @@ void mark_draw(SDL_Renderer *renderer, TTF_Font *font) {
         cbuf->mark.ex = tsx;
         cbuf->mark.ey = tsy;
     }
-    SDL_Rect *mark_rect = tcalloc((cbuf->mark.ey - cbuf->mark.sy) + 1, sizeof(SDL_Rect));
     
     for (int y = cbuf->mark.sy; y <= cbuf->mark.ey; ++y) {
         if (y == cbuf->mark.sy && cbuf->mark.ey - cbuf->mark.sy >= 1) {
@@ -106,9 +127,11 @@ void mark_kill() {
     } while (q < cbuf->mark.ey);
 
     printf("%d\n", cliplen); fflush(stdout);
-    
+
+    LOG("E");
     char *clip = tcalloc(cliplen, 1);
-    int i=0;
+    LOG("F");
+    size_t i=0;
         
     point_x = cbuf->mark.ex;
     point_y = cbuf->mark.ey;
@@ -159,7 +182,7 @@ void mark_kill() {
 
             point_x = px;
 
-            free(s);
+            tfree(s);
         }
 
         if (point_x == cbuf->mark.sx && point_y == cbuf->mark.sy) {
@@ -167,6 +190,7 @@ void mark_kill() {
         }
     }
 
+    printf("Length: %d\n", i); fflush(stdout);
     char *rev = talloc(i);
     
     for (int c = 0; c < i; ++c) {
@@ -180,4 +204,6 @@ void mark_kill() {
     point_y = cbuf->mark.sy;
     
     cbuf->mark.on = false;
+    tfree(mark_rect);
+    mark_rect = NULL;
 }

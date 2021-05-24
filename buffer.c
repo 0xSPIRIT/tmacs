@@ -13,6 +13,8 @@
 int point_x = 0;
 int point_y = 0;
 
+int smart_indent_mode = 0;
+
 bool insert_mode = false;
 
 struct Buffer *cbuf = NULL;
@@ -89,6 +91,7 @@ struct Buffer *buffer_new(const char *name, bool minibuf) {
 void buffer_newline() {
     int i;
     char *end;
+    int indentation = 0;
 
     if (cbuf->is_minibuf) {
         minibuffer_execute_command();
@@ -96,6 +99,13 @@ void buffer_newline() {
         return;
     }
 
+    point_time = 0;
+
+    if (smart_indent_mode) {
+        while (cbuf->lines[point_y].string[indentation++] == ' ');
+        printf("%d\n", indentation); fflush(stdout);
+    }
+    
     end = tcalloc(cbuf->lines[point_y].length, 1);
     strcpy(end, cbuf->lines[point_y].string + point_x);
     
@@ -105,10 +115,10 @@ void buffer_newline() {
     point_y++;
 
     if (cbuf->length > cbuf->capacity) {
-        int add = 5;
+        int add = cbuf->capacity;
         
         cbuf->capacity += add;
-        cbuf->lines = realloc(cbuf->lines, sizeof(struct Line) * cbuf->capacity);
+        cbuf->lines = trealloc(cbuf->lines, sizeof(struct Line) * cbuf->capacity);
         for (i = cbuf->capacity-add; i < cbuf->capacity; ++i) {
             line_new(&cbuf->lines[i]);
         }
@@ -120,18 +130,24 @@ void buffer_newline() {
 
     line_new(cbuf->lines + point_y);
     point_x = 0;
-    
+
+    if (smart_indent_mode) {
+        for (int c = 0; c < indentation-1; ++c) {
+            line_insert_char_at(&cbuf->lines[point_y], ' ', 0);
+        }
+    }
+
     line_insert_str(cbuf->lines + point_y, end);
         
-    point_x = 0;
-    free(end);
+    point_x = cbuf->lines[point_y].length;
+    tfree(end);
 }
 
 /* Removes a line from the current buffer. */
 void buffer_cutline(int k) {
     int i;
 
-    free(cbuf->lines[k].string);
+    tfree(cbuf->lines[k].string);
     for (i = k; i < cbuf->length; ++i) {
         cbuf->lines[i] = cbuf->lines[i+1];
     }
@@ -182,13 +198,13 @@ void buffer_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buf) {
 void buffer_free(struct Buffer *buf) {
     int i;
 
-    for (i = 0; i < buf->length; ++i) {
-        free(buf->lines[i].string);
+    for (i = 0; i < buf->capacity; ++i) {
+        tfree(buf->lines[i].string);
     }
 
-    free(buf->name);
-    free(buf->lines);
-    free(buf);
+    tfree(buf->name);
+    tfree(buf->lines);
+    tfree(buf);
 }
 
 /* Clears the lines of a buffer */
@@ -198,7 +214,7 @@ void buffer_reset(struct Buffer *buf) {
     for (int i = 1; i < buf->length; ++i) {
         line_cut_str(buf->lines + i, 0, buf->lines[i].length);
         buf->lines[i].length = 0;
-        free(buf->lines[i].string);
+        tfree(buf->lines[i].string);
     }
     buf->length = 1;
 }
@@ -207,6 +223,8 @@ void buffer_reset(struct Buffer *buf) {
 void buffer_load_file(struct Buffer *buf, char *file) {
     FILE *f;
     char *str;
+
+    LOG("Start");
 
     f = fopen(file, "rb");
     if (!f) {
@@ -242,25 +260,29 @@ void buffer_load_file(struct Buffer *buf, char *file) {
 
     insert_mode = false;
 
-    str = read_file(f, NULL);
+    size_t length = 0;
+    str = read_file(f, &length);
         
     fclose(f);
 
-    while (*str) {
-        if (*str == '\r' && *(str+1) == '\n') { ++str; continue; }
+    for (int i = 0; i < length; ++i) {
+        if (str[i] == '\r' && str[i+1] == '\n') { ++i; continue; }
         
-        if (*str == '\n' || *str == '\r') {
+        if (str[i] == '\n' || str[i] == '\r') {
             buffer_newline();
         } else {
-            line_insert_char(buf->lines+point_y, *str);
+            line_insert_char(buf->lines+point_y, str[i]);
         }
-        ++str;
     }
+
+    tfree(str);
 
     cbuf->yoff = cbuf->desired_yoff = 0;
 
     point_x = 0;
     point_y = 0;
+    
+    LOG("End");
 }
 
 /* Save buffer as a new file. */
@@ -299,7 +321,7 @@ int buffer_find_eol_sequence(struct Buffer *buf) {
             }
         }
 
-        free(str);
+        tfree(str);
     }
     fclose(f);
 
@@ -328,6 +350,7 @@ void buffer_save(struct Buffer *buf) {
         
         minibuffer_log("write-to ");
         point_x = minibuf->lines[0].length;
+        point_time = 0;
         return;
     }
 

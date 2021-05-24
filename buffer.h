@@ -16,6 +16,8 @@
 extern int point_x;
 extern int point_y;
 
+extern int smart_indent_mode;
+
 /* End of Line Sequences */
 enum {
     EOL_UNKNOWN = 0,

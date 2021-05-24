@@ -22,6 +22,8 @@ Uint32 point_time = 0,
     last,
     delta = 0;
 
+int memory_debug = 0;
+
 SDL_Window *window;
 SDL_Renderer *renderer;
 
@@ -32,8 +34,10 @@ int char_w, char_h;
 
 bool running;
 
-char *separator_charset = "_()+-{}.,[]<>!@#$%^&*=~;:'\"";
+char *separator_charset = "_()+-{}.,[]<>!@#$%^&*=~;:'\"/\\";
 int seplen;
+
+int memory_counter = 0;
 
 static inline void clamp_y_min() {
     if (point_y < 0) point_y = 0;
@@ -74,7 +78,7 @@ static inline void point_forward_paragraph() {
     point_x = 0;
     while (point_y < cbuf->length && is_line_blank(cbuf->lines+(point_y))) {point_y++;}
     while (point_y < cbuf->length && !is_line_blank(cbuf->lines+(point_y))) {point_y++;}
-    
+
     point_time = 0;
 }
 
@@ -160,6 +164,8 @@ int main(int argc, char **argv) {
                     cfg_file = argv[++i];
                 } else if (0==strcmp(argv[i]+1, "f") || 0==strcmp(argv[i]+1, "file")) {
                     init_fn[len++] = argv[i];
+                } else if (0==strcmp(argv[i]+1, "mem")) {
+                    memory_debug = 1;
                 }
             } else {
                 init_fn[len++] = argv[i];
@@ -195,7 +201,7 @@ int main(int argc, char **argv) {
     
     renderer = SDL_CreateRenderer(window, -1, vsync ? SDL_RENDERER_PRESENTVSYNC : 0);
     tassert(renderer);
-    
+
     running = true;
 
     SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
@@ -300,7 +306,7 @@ int main(int argc, char **argv) {
                             buffer_cutline(point_y);
                             if (point_y >= cbuf->length) point_y = cbuf->length - 1;
                         }
-                    } else if (is_control_held(keys)) {
+                    } else if (is_control_held(keys) || is_meta_held(keys)) {
                         backward_kill_word();
                     } else if (point_x > 0) {
                         line_cut_char(&cbuf->lines[point_y], --point_x);
@@ -320,7 +326,7 @@ int main(int argc, char **argv) {
 
                         point_x = px;
 
-                        free(s);
+                        tfree(s);
                     }
                     break;
                 case SDLK_INSERT: case SDLK_KP_0:
@@ -375,7 +381,7 @@ int main(int argc, char **argv) {
 
                             line_cut_str(cbuf->lines + point_y, point_x, cbuf->lines[point_y].length);
 
-                            free(end);
+                            tfree(end);
                         }
                         if (point_y >= cbuf->length) point_y = cbuf->length - 1;
                         if (point_x > cbuf->lines[point_y].length) point_x = cbuf->lines[point_y].length;
@@ -394,8 +400,8 @@ int main(int argc, char **argv) {
                     break;
 
                 case SDLK_v:
-                    if (is_control_held(keys)) goto pgdn;
-                    if (is_meta_held(keys)) goto pgup;
+                    if (is_control_held(keys) && cbuf != minibuf) goto pgdn;
+                    if (is_meta_held(keys) && cbuf != minibuf) goto pgup;
                     break;
                     
                 case SDLK_PAGEDOWN:
@@ -425,8 +431,16 @@ int main(int argc, char **argv) {
                         buffer_switch(c);
                         cbuf = buffers[buffer_index];
                     } else {
-                        for (int i = 0; i < tab_width; ++i) {
-                            line_insert_char(cbuf->lines + point_y, ' ');
+                        if (is_shift_held(keys)) {
+                            point_x = 0;
+                            for (int i = 0; i < tab_width; ++i) {
+                                if (cbuf->lines[point_y].string[0] != ' ') break;
+                                line_cut_char(cbuf->lines + point_y, 0);
+                            }
+                        } else {
+                            for (int i = 0; i < tab_width; ++i) {
+                                line_insert_char(cbuf->lines + point_y, ' ');
+                            }
                         }
                         point_time = 0;
                     }
@@ -435,6 +449,11 @@ int main(int argc, char **argv) {
                 case SDLK_q:
                     if (is_control_held(keys)) {
                         buffer_kill();
+                    } else if (is_meta_held(keys)) {
+                        minibuffer_toggle();
+                        minibuffer_log("shell-command \"\"");
+                        point_x = minibuf->lines[0].length-1;
+                        point_time = 0;
                     }
                     break;
 
@@ -445,7 +464,7 @@ int main(int argc, char **argv) {
                             point_time = 0;
                         } else {
                             minibuffer_toggle();
-                            minibuffer_log("switch ");
+                            minibuffer_log("switch-to ");
                             point_x = minibuf->lines[0].length;
                             point_time = 0;
                         }
@@ -456,8 +475,8 @@ int main(int argc, char **argv) {
                     if (is_control_held(keys)) {
                         if (is_shift_held(keys)) {
                             minibuffer_toggle();
-                            minibuffer_log("write-to ");
-                            point_x = minibuf->lines[0].length;
+                            minibuffer_log("write-to \"\"");
+                            point_x = minibuf->lines[0].length-1;
                             point_time = 0;
                         } else {
                             buffer_save(cbuf);
@@ -468,8 +487,8 @@ int main(int argc, char **argv) {
                 case SDLK_o:
                     if (is_control_held(keys) && cbuf != minibuf) {
                         minibuffer_toggle();
-                        minibuffer_log("open ");
-                        point_x = minibuf->lines[0].length;
+                        minibuffer_log("open \"\"");
+                        point_x = minibuf->lines[0].length-1;
                         point_time = 0;
                     }
                     break;
@@ -563,7 +582,7 @@ int main(int argc, char **argv) {
                         point_forward_word();
                         break;
                     }
-                    
+
                     if (!is_control_held(keys)) break;
                     
                     case SDLK_RIGHT:
@@ -637,10 +656,12 @@ int main(int argc, char **argv) {
                     if (*event.text.text == ' ' && is_control_held(keys)) {
                         if (cbuf->mark.on && cbuf->mark.sx == cbuf->mark.ex && cbuf->mark.sy == cbuf->mark.ey) {
                             cbuf->mark.on = false;
-                            minibuffer_log("Mark deactivated");
+                            if (cbuf != minibuf)
+                                minibuffer_log("Mark deactivated");
                         } else {
                             mark_start(point_x, point_y);
-                            minibuffer_log("Mark set");
+                            if (cbuf != minibuf)
+                                minibuffer_log("Mark set");
                         }
                     } else {
                         line_insert_str(&cbuf->lines[point_y], event.text.text);
@@ -676,7 +697,7 @@ int main(int argc, char **argv) {
 
         point_rect.x = cbuf->x + point_x * char_w;
         point_rect.y = cbuf->y + point_y * char_h - cbuf->yoff;
-        point_rect.w = insert_mode ? char_w : 1;
+        point_rect.w = char_w;
         point_rect.h = char_h;
 
         clear_rect.x = 0;
@@ -684,31 +705,26 @@ int main(int argc, char **argv) {
         clear_rect.w = window_width;
         clear_rect.h = char_h*3;
 
-        if (cbuf != minibuf) {
-            if (cbuf->mark.on) {
-                mark_update(point_x, point_y);
-                mark_draw(renderer, font);
-            }
-            buffer_draw(renderer, font, buffers[buffer_index]);
+        if (cbuf->mark.on) {
+            mark_update(point_x, point_y);
+            mark_draw(renderer, font);
         }
+        buffer_draw(renderer, font, buffers[buffer_index]);
         
         SDL_SetRenderDrawColor(renderer, 33, 33, 33, 255);
         SDL_RenderFillRect(renderer, &clear_rect);
 
-        if (cbuf == minibuf) {
-            if (cbuf->mark.on) {
-                mark_update(point_x, point_y);
-                mark_draw(renderer, font);
-            }
-            buffer_draw(renderer, font, buffers[buffer_index]);
-        }
-        
         if (SDL_GetWindowFlags(window) & SDL_WINDOW_INPUT_FOCUS) {
-            SDL_SetRenderDrawColor(renderer, 255, 255, 255, point_alpha);
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, point_alpha / 3);
         } else {
             SDL_SetRenderDrawColor(renderer, 255, 255, 255, 64);
         }
-        SDL_RenderDrawRect(renderer, &point_rect);
+
+        if (insert_mode) {
+            SDL_RenderDrawRect(renderer, &point_rect);
+        } else {
+            SDL_RenderFillRect(renderer, &point_rect);
+        }
 
         buffer_draw(renderer, font, minibuf);
 
@@ -730,6 +746,8 @@ int main(int argc, char **argv) {
     lisp_free(lisp);
 
     TTF_CloseFont(font);
+
+    print_memory_counter();
     
     SDL_DestroyWindow(window);
     SDL_DestroyRenderer(renderer);

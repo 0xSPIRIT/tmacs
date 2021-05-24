@@ -26,10 +26,10 @@ void line_insert_char(struct Line *line, int c) {
     }
     
     if (line->length >= line->capacity) {
-        int add = 10;
+        int add = line->capacity;
         
         line->capacity += add;
-        line->string = realloc(line->string, line->capacity);
+        line->string = trealloc(line->string, line->capacity);
         memset(line->string + line->length, 0, add);
     }
     
@@ -51,10 +51,10 @@ void line_insert_char_at(struct Line *line, int c, int k) {
     }
     
     if (line->length >= line->capacity) {
-        int add = 10;
+        int add = line->capacity;
         
         line->capacity += add;
-        line->string = realloc(line->string, line->capacity);
+        line->string = trealloc(line->string, line->capacity);
         memset(line->string + line->length, 0, add);
     }
     
@@ -135,10 +135,9 @@ int is_line_blank(struct Line *line) {
 
     int i=0;
     while (i < line->length) {
-        if (!isspace(line->string[i])) {
+        if (!isspace(line->string[i++])) {
             return false;
         }
-        ++i;
     }
 
     return true;
