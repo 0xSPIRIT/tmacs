@@ -122,9 +122,10 @@ static inline char *read_file(FILE *f, size_t *l) {
     length = ftell(f);
     fseek(f, p, SEEK_SET);
 
-    str = tcalloc(length, 1);
-    fread(str, 1, length, f);
-
+    str = talloc(length+1);
+    length = fread(str, 1, length, f);
+    str[length] = 0;
+    
     if (l) *l = length;
 
     return str;

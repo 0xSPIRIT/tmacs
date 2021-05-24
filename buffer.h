@@ -18,21 +18,11 @@ extern int point_y;
 
 extern int smart_indent_mode;
 
-/* End of Line Sequences */
-enum {
-    EOL_UNKNOWN = 0,
-    EOL_LF,
-    EOL_CR,
-    EOL_CRLF
-};
-
 struct Buffer {
     struct Line *lines;
     char *name;
 
     bool is_minibuf;
-
-    int  eol;                   /* End of line char sequence. */
     
     int  capacity, length;
 
@@ -64,7 +54,6 @@ void buffer_reset(struct Buffer *buf);
 void buffer_save(struct Buffer *buf);
 void buffer_save_new(struct Buffer *buf, const char *name);
 void buffer_load_file(struct Buffer *buf, char *file);
-int buffer_find_eol_sequence(struct Buffer *buf);
 
 #endif  /* BUFFER_H_ */
 

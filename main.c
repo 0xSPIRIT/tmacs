@@ -66,7 +66,7 @@ static inline void clamp_y_max() {
 
 static inline bool is_separator(int c) {
     if (isspace(c)) return true;
-    
+
     for (int i = 0; i < seplen; ++i) {
         if (c == separator_charset[i])
             return true;
@@ -385,6 +385,8 @@ int main(int argc, char **argv) {
                         }
                         if (point_y >= cbuf->length) point_y = cbuf->length - 1;
                         if (point_x > cbuf->lines[point_y].length) point_x = cbuf->lines[point_y].length;
+                        
+                        point_time = 0;
                     } else if (is_meta_held(keys)) {
                         mark_whole_buffer();
                     }
@@ -743,6 +745,7 @@ int main(int argc, char **argv) {
     for (int i = 0; i < BUFFERS_MAX; ++i) {
         if (buffers[i]) buffer_free(buffers[i]);
     }
+    
     lisp_free(lisp);
 
     TTF_CloseFont(font);

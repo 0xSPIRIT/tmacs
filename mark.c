@@ -137,19 +137,20 @@ void mark_kill() {
     point_y = cbuf->mark.ey;
 
     
-#define DO_EOL()                                \
-    switch (cbuf->eol) {                        \
-    case EOL_LF:                                \
-        clip[i++] = '\n';                       \
-        break;                                  \
-    case EOL_CR:                                \
-        clip[i++] = '\r';                       \
-        break;                                  \
-    case EOL_CRLF:                              \
-        clip[i++] = '\n';                       \
-        clip[i++] = '\r';                       \
-        break;                                  \
-    }                                           \
+#define DO_EOL() clip[i++] = '\n';
+    
+    /* switch (cbuf->eol) {                        \ */
+    /* case EOL_LF:                                \ */
+    /*     clip[i++] = '\n';                       \ */
+    /*     break;                                  \ */
+    /* case EOL_CR:                                \ */
+    /*     clip[i++] = '\r';                       \ */
+    /*     break;                                  \ */
+    /* case EOL_CRLF:                              \ */
+    /*     clip[i++] = '\n';                       \ */
+    /*     clip[i++] = '\r';                       \ */
+    /*     break;                                  \ */
+    /* }                                           \ */
 
     
     while (true) {
@@ -192,7 +193,8 @@ void mark_kill() {
 
     printf("Length: %d\n", i); fflush(stdout);
     char *rev = talloc(i);
-    
+
+    // Reverse the string, because we've read everything in reverse before.
     for (int c = 0; c < i; ++c) {
         rev[c] = clip[(i-1)-c];
     }
