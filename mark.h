@@ -6,6 +6,8 @@
 
 #include <stdbool.h>
 
+#define MAX_MARK 8192
+
 struct Mark {
     bool on;
     
@@ -18,6 +20,6 @@ extern struct Mark mark;
 void mark_start(int sx, int sy);
 void mark_update(int ex, int ey);
 void mark_draw(SDL_Renderer *renderer, TTF_Font *font);
-void mark_kill();
+void mark_kill(int char_w, int char_h);
 
 #endif  /* MARK_H_ */

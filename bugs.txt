@@ -1,1 +1,4 @@
-- Sometimes a file doesn't load correctly, has some semi-random stuff at the end of the file.
+- Buffers don't free properly.
+- Killing a mark sometimes crashes due to UB.
+- Not 100% but sometimes clipboard has extra shit at the end when
+  killing a mark.

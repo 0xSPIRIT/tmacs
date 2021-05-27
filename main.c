@@ -110,7 +110,7 @@ static inline void backward_kill_word() {
     mark_start(point_x, point_y);
     point_backward_word();
     mark_update(point_x, point_y);
-    mark_kill(cbuf);
+    mark_kill(char_w, char_h);
 
     point_time = 0;
 }
@@ -119,7 +119,7 @@ static inline void forward_kill_word() {
     mark_start(point_x, point_y);
     point_forward_word();
     mark_update(point_x, point_y);
-    mark_kill(cbuf);
+    mark_kill(char_w, char_h);
 
     point_time = 0;
 }
@@ -394,7 +394,7 @@ int main(int argc, char **argv) {
                 case SDLK_w:
                     if (cbuf->mark.on) {
                         if (is_control_held(keys)) {
-                            mark_kill(cbuf);
+                            mark_kill(char_w, char_h);
                         } else if (is_meta_held(keys)) {
                             //mark_copy(cbuf);
                         }
@@ -413,6 +413,7 @@ int main(int argc, char **argv) {
                     d *= char_h;
                     cbuf->desired_yoff += d;
                     point_y += d/char_h;
+                    clamp_y_max();
                     point_time = 0;
                     break;
                 case SDLK_PAGEUP:
@@ -423,6 +424,7 @@ int main(int argc, char **argv) {
                     cbuf->desired_yoff -= e;
                     if (cbuf->desired_yoff < 0) cbuf->desired_yoff = 0;
                     point_y -= e/char_h;
+                    clamp_y_min();
                     point_time = 0;
                     break;
                     
@@ -627,24 +629,24 @@ int main(int argc, char **argv) {
                 case SDLK_y:
                     if (is_control_held(keys)) {
                         char *clip = SDL_GetClipboardText();
+                        size_t length = strlen(clip);
 
-                        while (*clip) {
-                            /* Handling different end-of-line character sequences. */
-                            if (*clip == '\n') {
+                        printf("%u\n", length); fflush(stdout);
+
+                        for (size_t i = 0; i < length; ++i) {
+                            if (clip[i] == '\n') {
                                 buffer_newline(false);
-                                LOG("LF");
-                            } else if (*clip == '\r' && *(clip+1) == '\n') {
+                            } else if (clip[i] == '\r' && clip[i+1] == '\n') {
                                 buffer_newline(false);
-                                ++clip;
-                                LOG("CRLF");
-                            } else if (*clip == '\r') {
+                                ++i;
+                            } else if (clip[i] == '\r') {
                                 buffer_newline(false);
-                                LOG("CR");
                             } else {
-                                line_insert_char(cbuf->lines+point_y, *clip);
+                                line_insert_char(cbuf->lines+point_y, clip[i]);
                             }
-                            ++clip;
                         }
+
+                        SDL_free(clip);
                     }
                     break;
                 }
@@ -742,11 +744,15 @@ int main(int argc, char **argv) {
         SDL_RenderPresent(renderer);
     }
 
+    LOG("Freeing Buffers");
     for (int i = 0; i < BUFFERS_MAX; ++i) {
         if (buffers[i]) buffer_free(buffers[i]);
     }
+    LOG("Finished Freeing Buffers");
     
+    LOG("Starting lisp");
     lisp_free(lisp);
+    LOG("Finished lisp");
 
     TTF_CloseFont(font);
 

@@ -83,6 +83,16 @@ void line_insert_str(struct Line *line, char *str) {
     }
 }
 
+/* Insert string starting at k in a line. */
+void line_insert_str_at(struct Line *line, char *str, int k) {
+    size_t length = strlen(str);
+
+    for (int i = 0; i < length; ++i) {
+        putchar(str[i]); fflush(stdout);
+        line_insert_char_at(line, str[i], k+i);
+    }
+}
+
 /* Removes a character from the line. */
 void line_cut_char(struct Line *line, int n) {
     int i;
@@ -141,4 +151,10 @@ int is_line_blank(struct Line *line) {
     }
 
     return true;
+}
+
+/* Resets string data in line to nothing. */
+void line_reset(struct Line *line) {
+    memset(line->string, 0, line->capacity);
+    line->length = 0;
 }

@@ -91,8 +91,6 @@ void buffer_newline(bool smart_indent) {
     char *end = NULL;
     int indentation = 0;
     
-    printf("%d\n", memory_counter); fflush(stdout);
-
     if (cbuf->is_minibuf) {
         minibuffer_execute_command();
         minibuffer_toggle();
@@ -106,10 +104,8 @@ void buffer_newline(bool smart_indent) {
 
     point_time = 0;
 
-    if (cbuf->lines[point_y].length) {
-        end = tcalloc(cbuf->lines[point_y].length, 1);
-        strcpy(end, cbuf->lines[point_y].string + point_x);
-    }
+    end = tcalloc(cbuf->lines[point_y].length, 1);
+    strcpy(end, cbuf->lines[point_y].string + point_x);
     
     line_cut_str(cbuf->lines + point_y, point_x, cbuf->lines[point_y].length);
     
@@ -120,7 +116,7 @@ void buffer_newline(bool smart_indent) {
         int add = cbuf->capacity;
         
         cbuf->capacity += add;
-        cbuf->lines = trealloc(cbuf->lines, sizeof(struct Line) * cbuf->capacity);
+        cbuf->lines = trealloc(cbuf->lines, sizeof(struct Line) * cbuf->capacity); // error here for some reason.
         for (i = cbuf->capacity-add; i < cbuf->capacity; ++i) {
             line_new(&cbuf->lines[i]);
         }
@@ -129,6 +125,11 @@ void buffer_newline(bool smart_indent) {
     for (i = cbuf->length-1; i > point_y; --i) {
         cbuf->lines[i] = cbuf->lines[i-1];
     }
+
+    // TODO: Read over this code... something is wrong here. For some reason I have to not free this memory, which feels like I'm depending on undefined behaviour.
+    
+    /* tfree(cbuf->lines[point_y].string); */
+    line_new(cbuf->lines+point_y);
     
     if (smart_indent) {
         for (int c = 0; c < indentation; ++c) {
@@ -136,12 +137,11 @@ void buffer_newline(bool smart_indent) {
         }
     }
     
-    point_x = indentation;
+    point_x = 0;
+    line_insert_str(cbuf->lines + point_y, end);
+    point_x = 0;
 
-    if (end) {
-        line_insert_str(cbuf->lines + point_y, end);
-        tfree(end);
-    }
+    tfree(end);
 }
 
 /* Removes a line from the current buffer. */
@@ -198,6 +198,7 @@ void buffer_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buf) {
 /* Frees a buffer from memory. */
 void buffer_free(struct Buffer *buf) {
     for (int i = 0; i < buf->capacity; ++i) {
+        printf("%d\n", i); fflush(stdout);
         tfree(buf->lines[i].string);
     }
 

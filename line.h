@@ -9,6 +9,8 @@ struct Line {
 struct Line *line_new(struct Line *line);
 void line_insert_char(struct Line *line, int c);
 void line_insert_str(struct Line *line, char *str);
+void line_insert_str_at(struct Line *line, char *str, int k);
+void line_reset(struct Line *line);
 void line_cut_char(struct Line *line, int n);
 void line_insert_char_at(struct Line *line, int c, int k);
 void line_cut_str(struct Line *line, int n, int k);

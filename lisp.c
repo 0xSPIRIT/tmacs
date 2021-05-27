@@ -294,7 +294,7 @@ struct Lisp *lisp_interpret(const char *file) {
 
     fclose(f);
     
-    struct Token *toks = tcalloc(TOKEN_MAX, sizeof(struct Token));
+    struct Token *toks = talloc(TOKEN_MAX * sizeof(struct Token));
 
     int i=0, j=0;
     char curtok[STRING_MAX] = {0};
