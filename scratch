@@ -1,8 +1,0 @@
--*- mode: compilation; default-directory: "d:/C_Programs/tmacs/" -*-
-Compilation started at Wed May 26 23:54:19
-
-c.bat
-
-d:\C_Programs\tmacs>gcc *.c -g -lSDL2 -lSDL2main -lSDL2_ttf 
-
-Compilation finished at Wed May 26 23:54:20

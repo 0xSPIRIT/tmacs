@@ -23,6 +23,14 @@ int buffers_count = 1;
 int buffer_index = 0;
 int buffer_previous_index = 0;
 
+int buffer_find_index(struct Buffer *buf) {
+    for (int i = 0; i < BUFFERS_MAX; ++i) {
+        if (buffers[i] == buf) return i;        
+    }
+
+    return -1;
+}
+
 /* Switches buffer_index to i. Does not set cbuf. */
 void buffer_switch(int i) {
     buffer_previous_index = buffer_index;
@@ -36,18 +44,18 @@ void buffer_kill() {
     if (buffers_count == 1) return;
     
     buffer_free(buffers[buffer_index]);
-
+    
     for (int i = buffer_index; i < buffers_count; ++i) {
         buffers[i] = buffers[i+1];
     }
     buffers_count--;
-
+    
     if (buffer_index >= buffers_count) buffer_index = buffers_count-1;
-
+    
     cbuf = buffers[buffer_index];
     point_x = cbuf->px;
     point_y = cbuf->py;
-         
+    
     if (buffer_previous_index >= buffers_count) buffer_previous_index = buffers_count-1;
 }
 
@@ -57,28 +65,30 @@ struct Buffer *buffer_new(const char *name, bool minibuf) {
     int i;
     
     b = talloc(sizeof(struct Buffer));
-
+    
     b->capacity = 8;
     b->length = 1;
     b->lines = tcalloc(b->capacity, sizeof(struct Line));
     b->is_minibuf = minibuf;
     b->name = tcalloc(FNAME_MAX, 1);
     
-    /* b->eol = EOL_UNKNOWN; */
-
     b->x = 0;
     b->y = 0;
-
+    b->w = window_width;
+    b->h = window_height;
+    
     b->px = 0;
     b->py = 0;
     
     b->yoff = 0;
     b->desired_yoff = 0;
-
+    b->xoff = 0;
+    b->desired_xoff = 0;
+    
     memset(&b->mark, 0, sizeof(struct Mark));
-
+    
     strcpy(b->name, name);
-
+    
     for (i = 0; i < b->capacity; ++i)
         line_new(&b->lines[i]);
     
@@ -96,14 +106,14 @@ void buffer_newline(bool smart_indent) {
         minibuffer_toggle();
         return;
     }
-
+    
     if (smart_indent) {
         while (cbuf->lines[point_y].string[indentation++] == ' ');
         --indentation;
     }
-
+    
     point_time = 0;
-
+    
     end = tcalloc(cbuf->lines[point_y].length, 1);
     strcpy(end, cbuf->lines[point_y].string + point_x);
     
@@ -111,7 +121,7 @@ void buffer_newline(bool smart_indent) {
     
     cbuf->length++;
     point_y++;
-
+    
     if (cbuf->length > cbuf->capacity) {
         int add = cbuf->capacity;
         
@@ -121,14 +131,15 @@ void buffer_newline(bool smart_indent) {
             line_new(&cbuf->lines[i]);
         }
     }
-
+    
     for (i = cbuf->length-1; i > point_y; --i) {
         cbuf->lines[i] = cbuf->lines[i-1];
     }
-
+    
     // TODO: Read over this code... something is wrong here. For some reason I have to not free this memory, which feels like I'm depending on undefined behaviour.
     
-    /* tfree(cbuf->lines[point_y].string); */
+    //    tfree(cbuf->lines[point_y].string);
+    /* line_reset(cbuf->lines + point_y); */
     line_new(cbuf->lines+point_y);
     
     if (smart_indent) {
@@ -140,14 +151,14 @@ void buffer_newline(bool smart_indent) {
     point_x = 0;
     line_insert_str(cbuf->lines + point_y, end);
     point_x = 0;
-
+    
     tfree(end);
 }
 
 /* Removes a line from the current buffer. */
 void buffer_cutline(int k) {
     int i;
-
+    
     tfree(cbuf->lines[k].string);
     for (i = k; i < cbuf->length; ++i) {
         cbuf->lines[i] = cbuf->lines[i+1];
@@ -159,7 +170,7 @@ void buffer_cutline(int k) {
 void buffer_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buf) {
     int i;
     SDL_Color color = { 255, 255, 255, 255 };
-
+    
     int char_w, char_h;
     
     TTF_SizeText(font, "-", &char_w, &char_h);
@@ -169,21 +180,21 @@ void buffer_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buf) {
         SDL_Texture *texture;
         SDL_Rect dst;
         char *str;
-
+        
         if (i*char_h - buf->yoff < (-char_h+1) || i*char_h - buf->yoff > window_height - char_h) continue;
-
+        
         str = buf->lines[i].string;
-
+        
         if (!*str) continue;
-
+        
         if (!draw_text_blended) {
             surface = TTF_RenderText_Solid(font, str, color);
         } else {
             surface = TTF_RenderText_Blended(font, str, color);
         }
         texture = SDL_CreateTextureFromSurface(renderer, surface);
-
-        dst.x = buf->x;
+        
+        dst.x = buf->x - buf->xoff;
         dst.y = buf->y + i * char_h - buf->yoff;
         dst.w = surface->w;
         dst.h = char_h;
@@ -198,10 +209,9 @@ void buffer_draw(SDL_Renderer *renderer, TTF_Font *font, struct Buffer *buf) {
 /* Frees a buffer from memory. */
 void buffer_free(struct Buffer *buf) {
     for (int i = 0; i < buf->capacity; ++i) {
-        printf("%d\n", i); fflush(stdout);
         tfree(buf->lines[i].string);
     }
-
+    
     tfree(buf->name);
     tfree(buf->lines);
     tfree(buf);
@@ -223,7 +233,7 @@ void buffer_reset(struct Buffer *buf) {
 void buffer_load_file(struct Buffer *buf, char *file) {
     FILE *f;
     char *str;
-
+    
     f = fopen(file, "r");
     if (!f) {
         minibuffer_log("Creating new file.");
@@ -232,7 +242,7 @@ void buffer_load_file(struct Buffer *buf, char *file) {
         
         strcpy(buf->name, file);
         SDL_SetWindowTitle(window, buf->name);
-
+        
         point_x = 0;
         point_y = 0;
         
@@ -242,23 +252,23 @@ void buffer_load_file(struct Buffer *buf, char *file) {
         fclose(f);
         f = fopen(file, "r");
     }
-
+    
     cbuf = buf;
     
     strcpy(cbuf->name, file);
     SDL_SetWindowTitle(window, cbuf->name);
-
+    
     point_x = 0;
     point_y = 0;
-
+    
     insert_mode = false;
-
+    
     size_t length = 0;
     str = read_file(f, &length);
     fclose(f);
     
     printf("File Length: %u\n", length); fflush(stdout);
-        
+    
     for (int i = 0; i < length; ++i) {
         if (str[i] == '\n') {
             buffer_newline(false);
@@ -266,11 +276,11 @@ void buffer_load_file(struct Buffer *buf, char *file) {
             line_insert_char(buf->lines+point_y, str[i]);
         }
     }
-
+    
     tfree(str);
-
+    
     cbuf->yoff = cbuf->desired_yoff = 0;
-
+    
     point_x = 0;
     point_y = 0;
 }
@@ -279,7 +289,7 @@ void buffer_load_file(struct Buffer *buf, char *file) {
 void buffer_save_new(struct Buffer *buf, const char *name) {
     strcpy(buf->name, name);
     SDL_SetWindowTitle(window, name);
-
+    
     buffer_save(buf);
 }
 
@@ -287,7 +297,7 @@ void buffer_save_new(struct Buffer *buf, const char *name) {
 void buffer_save(struct Buffer *buf) {
     char msg[80] = {0};
     int i;
-
+    
     if (buf->name[0] == '*') {
         if (cbuf != minibuf) minibuffer_toggle();
         
@@ -296,17 +306,17 @@ void buffer_save(struct Buffer *buf) {
         point_time = 0;
         return;
     }
-
+    
     FILE *f = fopen(buf->name, "w");
-
+    
     for (i = 0; i < buf->length; ++i) {
         fputs(buf->lines[i].string, f);
-
+        
         if (i == buf->length-1) continue; /* Do not add an extra \n to the end. */
-
+        
         fputs("\n", f);
     }
-
+    
     strcat(msg, "Wrote to ");
     strcat(msg, buf->name);
     minibuffer_log(msg);

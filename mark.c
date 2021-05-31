@@ -91,9 +91,54 @@ void mark_draw(SDL_Renderer *renderer, TTF_Font *font) {
     cbuf->mark.ey = sey;
 }
 
-void mark_kill(int char_w, int char_h) {
-    cbuf->mark.on = true;
+void mark_copy(void) {
+    if (cbuf->mark.ey < cbuf->mark.sy) {
+        int temp = cbuf->mark.ey;
+        int temp2 = cbuf->mark.ex;
+        cbuf->mark.ey = cbuf->mark.sy;
+        cbuf->mark.ex = cbuf->mark.sx;
+        cbuf->mark.sy = temp;
+        cbuf->mark.sx = temp2;
+    }
+    if (cbuf->mark.ey == cbuf->mark.sy && cbuf->mark.sx > cbuf->mark.ex) {
+        int temp = cbuf->mark.sx;
+        cbuf->mark.sx = cbuf->mark.ex;
+        cbuf->mark.ex = temp;
+    }
 
+    size_t cliplen = 0;
+    size_t lines = 0;
+
+    do {
+        cliplen += cbuf->lines[lines++].length;
+    } while (lines < cbuf->mark.ey);
+
+    char *clip = talloc(cliplen);
+    size_t i = 0;
+        
+    point_x = cbuf->mark.sx;
+    point_y = cbuf->mark.sy;
+    
+    while (true) {
+        if (point_x < cbuf->lines[point_y].length) {
+            clip[i++] = cbuf->lines[point_y].string[point_x];
+            point_x++;
+        } else if (point_x >= cbuf->lines[point_y].length) {
+            clip[i++] = '\n';
+            point_y++;
+            point_x = 0;
+        }
+
+        if (point_x >= cbuf->mark.ex && point_y >= cbuf->mark.ey) break;
+    }
+    clip[i] = 0;
+
+    SDL_SetClipboardText(clip);
+    
+    cbuf->mark.on = false;
+}
+
+void mark_kill(int char_w, int char_h) {
     if (cbuf->mark.ey < cbuf->mark.sy) {
         int temp = cbuf->mark.ey;
         int temp2 = cbuf->mark.ex;
@@ -116,16 +161,11 @@ void mark_kill(int char_w, int char_h) {
         cliplen += cbuf->lines[lines++].length;
     } while (lines < cbuf->mark.ey);
 
-    printf("Mark Length: %u\n", cliplen);
-
-    char *clip = tcalloc(cliplen, 1);
+    char *clip = talloc(cliplen);
     size_t i = 0;
         
     point_x = cbuf->mark.sx;
     point_y = cbuf->mark.sy;
-
-#define DO_EOL()                                \
-    clip[i++] = '\n';
 
     while (true) {
         if (point_x < cbuf->lines[point_y].length) {
@@ -136,13 +176,16 @@ void mark_kill(int char_w, int char_h) {
             }
         } else if (point_x >= cbuf->lines[point_y].length) {
             if (cbuf->lines[point_y].length == 0) {
-                DO_EOL();
+                clip[i++] = '\n';
                 buffer_cutline(point_y);
                 point_x = 0;
                 cbuf->mark.ey--;
             } else {
-                size_t len = cbuf->lines[point_y].length;
-                char *s = talloc(len);
+                size_t len;
+                char *s;
+
+                len = cbuf->lines[point_y].length;
+                s = talloc(len);
                 strcpy(s, cbuf->lines[point_y].string);
 
                 buffer_cutline(point_y);
@@ -152,17 +195,16 @@ void mark_kill(int char_w, int char_h) {
                     cbuf->mark.ex += len;
                 }
 
-                DO_EOL();
+                clip[i++] = '\n';
                 
                 point_x = len;
                 tfree(s);
             }
         }
 
-        if (point_x == cbuf->mark.ex && point_y == cbuf->mark.ey) break;
+        if (point_x >= cbuf->mark.ex && point_y >= cbuf->mark.ey) break;
     }
-
-    LOG(clip);
+    clip[i] = 0;
 
     SDL_SetClipboardText(clip);
 

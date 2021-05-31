@@ -12,6 +12,12 @@
 
 #define BUFFERS_MAX 32
 #define FNAME_MAX   128
+#define FRAMES_MAX 3
+
+enum {
+    FRAME_POSITION_LEFT,
+    FRAME_POSITION_RIGHT,
+};
 
 extern int point_x;
 extern int point_y;
@@ -22,11 +28,15 @@ struct Buffer {
 
     bool is_minibuf;
     
-    int  capacity, length;
+    int capacity, length;
 
-    int  px, py;                 /* Last location of point_x and point_y */
-    int  x, y;                   /* Position of buffer on-screen. */
+    int px, py;                 /* Last location of point_x and point_y */
+    
+    int x, y;
+    int w, h;
+    
     float yoff, desired_yoff;
+    float xoff, desired_xoff;
 
     struct Mark mark;
 };
@@ -40,8 +50,9 @@ extern int buffer_index;
 extern int buffer_previous_index;
 extern bool insert_mode;
 
+int buffer_find_index(struct Buffer *buf);
 void buffer_switch(int i);
-void buffer_kill();
+void buffer_kill(void);
 
 struct Buffer *buffer_new(const char *name, bool minibuf);
 void buffer_newline(bool smart_indent);

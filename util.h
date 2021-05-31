@@ -131,7 +131,7 @@ static inline char *read_file(FILE *f, size_t *l) {
     return str;
 }
 
-static inline void print_memory_counter() {
+static inline void print_memory_counter(void) {
     printf("Outsanding memory allocations not freed: %d\n", memory_counter); fflush(stdout);
 }
 
