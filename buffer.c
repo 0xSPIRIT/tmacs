@@ -25,7 +25,7 @@ int buffer_previous_index = 0;
 
 int buffer_find_index(struct Buffer *buf) {
     for (int i = 0; i < BUFFERS_MAX; ++i) {
-        if (buffers[i] == buf) return i;        
+        if (buffers[i] == buf) return i;
     }
 
     return -1;

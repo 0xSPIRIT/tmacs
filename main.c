@@ -96,16 +96,64 @@ static inline void point_backward_paragraph() {
 }
 
 static inline void point_forward_word() {
-    while (point_x < cbuf->lines[point_y].length && isspace(cbuf->lines[point_y].string[point_x++]));
-    while (point_x < cbuf->lines[point_y].length && !is_separator(cbuf->lines[point_y].string[point_x++]));
+    point_time = 0;
+    
+    while (isspace(cbuf->lines[point_y].string[point_x++])) {
+        if (point_x == cbuf->lines[point_y].length) return;
+        
+        if (point_x > cbuf->lines[point_y].length) {
+            point_x = 0;
+            point_y++;
+            if (point_y >= cbuf->length) {
+                point_y = cbuf->length-1;
+                return;
+            }
+        }
+    }
+    while (!is_separator(cbuf->lines[point_y].string[point_x++])) {
+        if (point_x == cbuf->lines[point_y].length) return;
+        
+        if (point_x > cbuf->lines[point_y].length) {
+            point_x = 0;
+            point_y++;
+            if (point_y >= cbuf->length) {
+                point_y = cbuf->length-1;
+                return;
+            }
+        }
+    }
     if (point_x < cbuf->lines[point_y].length) point_x--;
     
     point_time = 0;
 }
 
 static inline void point_backward_word() {
-    while (point_x > 0 && isspace(cbuf->lines[point_y].string[--point_x]));
-    while (point_x > 0 && !is_separator(cbuf->lines[point_y].string[--point_x]));
+    point_time = 0;
+    
+    while (isspace(cbuf->lines[point_y].string[point_x--])) {
+        if (point_x == 0) return;
+        
+        if (point_x < 0 && point_y > 0) {
+            point_y--;
+            point_x = cbuf->lines[point_y].length;
+        }
+        if (point_x < 0 && point_y == 0) {
+            point_x = 0;
+            return;
+        }
+    }
+    while (!is_separator(cbuf->lines[point_y].string[point_x--])) {
+        if (point_x == 0) return;
+        
+        if (point_x < 0 && point_y > 0) {
+            point_y--;
+            point_x = cbuf->lines[point_y].length;
+        }
+        if (point_x < 0 && point_y == 0) {
+            point_x = 0;
+            return;
+        }
+    }
     if (point_x > 0) point_x++;
     
     point_time = 0;
@@ -222,7 +270,6 @@ int main(int argc, char **argv) {
     
     if (len == 0) {
         buffers[0] = buffer_new("*scratch*", false);
-        buffers[1] = buffer_new("*other-scratch*", false);
     } else {
         for (int i = 0; i < len; ++i) {
             buffers[i] = buffer_new("", false);
@@ -231,7 +278,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    buffers_count = 2;
+    buffers_count = 1;
     
     cbuf = buffers[0];
     
@@ -652,7 +699,7 @@ int main(int argc, char **argv) {
                         for (size_t i = 0; i < length; ++i) {
                             if (clip[i] == '\n') {
                                 buffer_newline(false);
-                            } else if (clip[i] == '\r' && clip[i+1] == '\n') {
+                            } else if (i < length-1 && clip[i] == '\r' && clip[i+1] == '\n') {
                                 buffer_newline(false);
                                 ++i;
                             } else if (clip[i] == '\r') {
@@ -661,8 +708,6 @@ int main(int argc, char **argv) {
                                 line_insert_char(cbuf->lines+point_y, clip[i]);
                             }
                         }
-                        
-                        SDL_free(clip);
                     }
                     break;
                 }
